@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trader Dashboard</title>
+<style>
+:root{
+  --bg:#f4f4f2; --surface:#fcfcfb; --surface-2:#f0efec; --line:#e2e1dc; --line-2:#cfcec8;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#7a7974;
+  --accent:#2a78d6; --accent-ink:#ffffff; --accent-soft:#e6f0fc;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --good-ink:#006300; --warn:#fab219; --warn-ink:#8a5a00; --bad:#d03b3b; --bad-ink:#a32323;
+  --good-soft:#e7f6e7; --warn-soft:#fdf3dc; --bad-soft:#fbe9e9;
+  --band-outer:#cde2fb; --band-inner:#86b6ef; --median:#1c5cab;
+  --shadow:0 1px 2px rgba(0,0,0,.04),0 1px 8px rgba(0,0,0,.04);
+  --r:12px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111110; --surface:#1a1a19; --surface-2:#232321; --line:#2e2e2b; --line-2:#3c3c38;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+  --accent:#3987e5; --accent-ink:#ffffff; --accent-soft:#1b2a3d;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#0ca30c; --good-ink:#5fd35f; --warn:#fab219; --warn-ink:#fab219; --bad:#e66767; --bad-ink:#f08a8a;
+  --good-soft:#15291a; --warn-soft:#2e2615; --bad-soft:#331b1b;
+  --band-outer:#184f95; --band-inner:#256abf; --median:#9ec5f4;
+  --shadow:none; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#111110; --surface:#1a1a19; --surface-2:#232321; --line:#2e2e2b; --line-2:#3c3c38;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#8f8e86;
+  --accent:#3987e5; --accent-ink:#ffffff; --accent-soft:#1b2a3d;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70;
+  --good:#0ca30c; --good-ink:#5fd35f; --warn:#fab219; --warn-ink:#fab219; --bad:#e66767; --bad-ink:#f08a8a;
+  --good-soft:#15291a; --warn-soft:#2e2615; --bad-soft:#331b1b;
+  --band-outer:#184f95; --band-inner:#256abf; --median:#9ec5f4;
+  --shadow:none; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.num,td.n,.tile .v{font-variant-numeric:tabular-nums}
+a{color:var(--accent)}
+button,input,select,textarea{font:inherit;color:inherit}
+/* layout */
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:100vh}
+.app>div{min-width:0}
+td.acts{white-space:nowrap}
+nav.side{background:var(--surface);border-right:1px solid var(--line);padding:18px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font-weight:700;font-size:17px;padding:4px 10px 2px}
+.brand-sub{color:var(--muted);font-size:12px;padding:0 10px 14px}
+.navgroup{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:14px 10px 6px}
+nav.side button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--text-2)}
+nav.side button:hover{background:var(--surface-2);color:var(--text)}
+nav.side button.on{background:var(--accent-soft);color:var(--text);font-weight:600}
+nav.side svg{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.badge{margin-left:auto;font-size:11px;background:var(--bad);color:#fff;border-radius:10px;padding:0 7px;line-height:18px}
+main{padding:22px 28px 60px;min-width:0;max-width:1240px}
+header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+header.top h1{font-size:22px;margin:0;font-weight:700;letter-spacing:-.01em}
+header.top .sub{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 10px;font-size:13px;color:var(--text-2);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.g{background:var(--good)} .dot.r{background:var(--bad)} .dot.y{background:var(--warn)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px;margin-bottom:16px;min-width:0}
+.card h2{font-size:16px;margin:0 0 4px;font-weight:650}
+.card .hint{color:var(--muted);font-size:13px;margin:0 0 14px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))} .g3{grid-template-columns:repeat(3,minmax(0,1fr))} .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--shadow)}
+.tile .k{font-size:12px;color:var(--muted)}
+.tile .v{font-size:24px;font-weight:650;letter-spacing:-.01em;margin-top:2px}
+.tile .d{font-size:13px;color:var(--text-2)}
+.up{color:var(--good-ink)} .down{color:var(--bad-ink)}
+/* controls */
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text-2);min-width:0}
+label.f.grow{flex:1;min-width:160px}
+input[type=text],input[type=number],input[type=email],input[type=password],input[type=date],input[type=time],select,textarea{background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;min-height:38px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input.sm{width:110px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line-2);background:var(--surface);border-radius:8px;padding:8px 14px;min-height:38px;cursor:pointer;font-weight:550;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--bad-ink);border-color:var(--bad)}
+.btn.ghost{border-color:transparent;background:none}
+.btn.sm{min-height:30px;padding:4px 10px;font-size:13px}
+.btn[disabled]{opacity:.55;cursor:wait}
+.spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
+@keyframes sp{to{transform:rotate(360deg)}}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--surface);padding:7px 12px;cursor:pointer;color:var(--text-2);border-right:1px solid var(--line-2)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent-soft);color:var(--text);font-weight:600}
+.toggle{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+/* tables */
+.tw{overflow-x:auto;margin:0 -2px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+th.n,td.n{text-align:right}
+tbody tr:hover td{background:var(--surface-2)}
+.sym{font-weight:650}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;font-size:12px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--line);margin:1px 3px 1px 0;white-space:nowrap}
+.chip.x{padding-right:4px}
+.chip.x button{border:0;background:none;cursor:pointer;color:var(--muted);padding:0 2px;font-size:14px;line-height:1}
+.status{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:13px;padding:3px 9px;border-radius:6px}
+.status.ok{background:var(--good-soft);color:var(--good-ink)}
+.status.no{background:var(--bad-soft);color:var(--bad-ink)}
+.status.wait{background:var(--warn-soft);color:var(--warn-ink)}
+.status.neutral{background:var(--surface-2);color:var(--text-2)}
+.msg{border-radius:10px;padding:10px 14px;font-size:14px;margin:10px 0;border:1px solid}
+.msg.err{background:var(--bad-soft);border-color:var(--bad);color:var(--text)}
+.msg.ok{background:var(--good-soft);border-color:var(--good);color:var(--text)}
+.msg.info{background:var(--surface-2);border-color:var(--line);color:var(--text-2)}
+.msg.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--text)}
+.empty{color:var(--muted);text-align:center;padding:28px 10px;font-size:14px}
+.muted{color:var(--muted)} .small{font-size:13px} .tiny{font-size:12px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px}
+hr.sep{border:0;border-top:1px solid var(--line);margin:16px 0}
+/* steps */
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.step{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font-size:13px;color:var(--text-2);cursor:pointer}
+.step b{width:20px;height:20px;border-radius:50%;display:inline-grid;place-items:center;font-size:11px;background:var(--surface-2);color:var(--text-2)}
+.step.done b{background:var(--good);color:#fff}
+.step.on{border-color:var(--accent);color:var(--text);font-weight:600}
+.step.on b{background:var(--accent);color:#fff}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-variant-numeric:tabular-nums}
+/* checklist */
+.check{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+.check:last-child{border-bottom:0}
+.check .ic{width:22px;height:22px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:13px;font-weight:700;color:#fff}
+.check .ic.ok{background:var(--good)} .check .ic.no{background:var(--warn);color:#3a2a00} .check .ic.opt{background:var(--line-2);color:var(--text-2)}
+.check .t{font-weight:600;font-size:14px} .check .d{font-size:13px;color:var(--text-2)}
+.lvl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-left:6px;font-weight:500}
+/* chart */
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .axis text{fill:var(--muted);font-size:11px}
+.chart .grid line{stroke:var(--line);stroke-width:1}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line-2);border-radius:8px;padding:8px 10px;font-size:12.5px;box-shadow:0 4px 18px rgba(0,0,0,.12);min-width:150px;z-index:5;display:none}
+.tip .h{font-weight:650;margin-bottom:3px}
+.tip .r{display:flex;justify-content:space-between;gap:14px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--text-2);margin:8px 0 2px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.oddsbar{display:flex;height:34px;border-radius:8px;overflow:hidden;gap:2px;background:var(--surface)}
+.oddsbar div{display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;color:#fff;min-width:0;white-space:nowrap;overflow:hidden}
+.debate{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.side-bull{border-top:3px solid var(--good)} .side-bear{border-top:3px solid var(--bad)}
+.pt{padding:10px 0;border-bottom:1px solid var(--line)} .pt:last-child{border-bottom:0}
+.pt .p{font-weight:600} .pt .e{font-size:13px;color:var(--text-2);margin-top:2px}
+.news-item{padding:12px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:86px 1fr;gap:12px}
+.news-item:last-child{border-bottom:0}
+.news-item .when{font-size:12px;color:var(--muted)}
+.news-item a.t{font-weight:600;text-decoration:none;color:var(--text)}
+.news-item a.t:hover{text-decoration:underline}
+.ticket{border:1px solid var(--line-2);border-radius:10px;padding:14px;margin-bottom:12px}
+details summary{cursor:pointer;color:var(--text-2);font-size:13px}
+.toast{position:fixed;right:20px;bottom:20px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:380px}
+.toast div{background:var(--text);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.2)}
+.toast div.e{background:var(--bad);color:#fff}
+.mobile-nav{display:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.disclaimer{font-size:12px;color:var(--muted);margin-top:24px;line-height:1.5}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  html,body{overflow-x:hidden}
+  .card{padding:14px}
+  .seg{flex-wrap:wrap}
+  nav.side{display:none}
+  .mobile-nav{display:block;position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);padding:8px 16px}
+  .mobile-nav select{width:100%}
+  main{padding:16px 16px 60px}
+  .g2,.g3,.g4,.debate{grid-template-columns:1fr}
+  .news-item{grid-template-columns:1fr;gap:2px}
+  .hide-m{display:none}
+  td.acts{white-space:normal;text-align:left}
+  header.top .pill{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="side" id="nav"></nav>
+  <div>
+    <div class="mobile-nav"><select id="mnav" aria-label="Go to page"></select></div>
+    <main id="main"></main>
+  </div>
+</div>
+<div class="toast" id="toast" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* ------------------------------------------------------------------ basics */
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (v, d=2) => v==null||isNaN(v) ? "—" : (v<0?"-":"") + "$" + Math.abs(+v).toLocaleString(undefined,{minimumFractionDigits:d,maximumFractionDigits:d});
+const big = v => { if(v==null) return "—"; const a=Math.abs(v); const s=v<0?"-":""; if(a>=1e12) return s+"$"+(a/1e12).toFixed(2)+"T"; if(a>=1e9) return s+"$"+(a/1e9).toFixed(2)+"B"; if(a>=1e6) return s+"$"+(a/1e6).toFixed(1)+"M"; return money(v,0); };
+const pct = (v, d=1, sign=true) => v==null||isNaN(v) ? "—" : (sign && v>0?"+":"") + (+v).toFixed(d) + "%";
+const cls = v => v>0 ? "up" : v<0 ? "down" : "";
+const arrow = v => v>0 ? "▲" : v<0 ? "▼" : "";
+const fmtTime = iso => { try { return new Date(iso).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) + " ET"; } catch(e){ return iso; } };
+
+async function api(name, body={}) {
+  const r = await fetch("/api/"+name, {method:"POST", headers:{"Content-Type":"application/json","X-Dashboard":"1"}, body:JSON.stringify(body)});
+  const j = await r.json().catch(()=>({ok:false,error:"The dashboard server did not answer. Is it still running?"}));
+  if (!j.ok) throw new Error(j.error || "Something went wrong");
+  return j.data;
+}
+function toast(text, err=false){ const d=document.createElement("div"); if(err) d.className="e"; d.textContent=text; $("#toast").appendChild(d); setTimeout(()=>d.remove(), err?7000:3500); }
+async function busy(btn, fn){
+  const old = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spin"></span> '+esc(btn.dataset.busy||"Working…");
+  try { return await fn(); } catch(e){ toast(e.message, true); throw e; } finally { btn.disabled=false; btn.innerHTML = old; }
+}
+const box = (kind, html) => `<div class="msg ${kind}">${html}</div>`;
+const errBox = e => box("err", esc(e.message||e));
+
+/* ------------------------------------------------------------------ state */
+const S = { state:null, quotes:{}, clock:null, page:"home", sim:null, trade:{step:1}, cache:{} };
+try { S.page = localStorage.getItem("td.page") || "home"; } catch(e){}
+if (location.hash.length > 1) S.page = location.hash.slice(1);
+
+const ICONS = {
+  home:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
+  watch:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  scan:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  news:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10M7 12h10M7 16h6"/>',
+  earn:'<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+  debate:'<path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
+  sim:'<path d="M3 17l5-5 4 3 8-9"/><path d="M14 6h6v6"/>',
+  trade:'<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+  bell:'<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  congress:'<path d="M3 21h18M5 21V10M19 21V10M9 21V10M15 21V10M2 10l10-6 10 6z"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+};
+const PAGES = [
+  {group:"Overview"},
+  {id:"home", label:"My Portfolio", icon:"home", title:"My Portfolio", sub:"Your US stocks, cash and today's moves"},
+  {id:"watch", label:"Watchlist", icon:"watch", title:"Watchlist", sub:"The stocks you follow. Add or remove any ticker."},
+  {group:"Research"},
+  {id:"scan", label:"Find Setups", icon:"scan", title:"Find Setups", sub:"Chart Scanner: breakouts, flags and oversold bounces", skill:"trader-scanner"},
+  {id:"news", label:"News", icon:"news", title:"News", sub:"News Monitor: headlines, SEC filings and big moves", skill:"trader-news"},
+  {id:"earn", label:"Earnings", icon:"earn", title:"Earnings", sub:"Earnings Analyst: reported numbers from SEC filings", skill:"trader-analyst"},
+  {id:"debate", label:"Bull vs Bear", icon:"debate", title:"Bull vs Bear", sub:"Both sides of the argument, built from the facts the skills collect"},
+  {id:"congress", label:"Congress Trades", icon:"congress", title:"Congress Trades", sub:"Pelosi Tracker: stock trades members of Congress disclose", skill:"trader-pelosi"},
+  {group:"Trade"},
+  {id:"sim", label:"Time Machine", icon:"sim", title:"Time Machine", sub:"Replay a trade 10,000 times before risking a dollar", skill:"trader-timemachine"},
+  {id:"trade", label:"Plan a Trade", icon:"trade", title:"Plan a Trade", sub:"Six steps: signal, stop & target, replay, size, risk check, approve", skill:"entry · exit · timemachine · budget · risk · broker"},
+  {id:"alerts", label:"Alerts", icon:"bell", title:"Price Alerts", sub:"Rings once when a price, a stop or a time hits", skill:"trader-alerts"},
+  {group:"Setup"},
+  {id:"settings", label:"Settings", icon:"gear", title:"Settings", sub:"Your rules, your accounts and anything that still needs setting up"},
+];
+
+function renderNav(){
+  const todo = (S.state?.checks||[]).filter(c=>!c.ok && c.level==="required").length;
+  $("#nav").innerHTML = `<div class="brand">Trader Dashboard</div><div class="brand-sub">11 skills · runs on this computer</div>` +
+    PAGES.map(p => p.group ? `<div class="navgroup">${p.group}</div>` :
+      `<button data-p="${p.id}" class="${S.page===p.id?"on":""}"><svg viewBox="0 0 24 24">${ICONS[p.icon]}</svg>${p.label}${p.id==="settings"&&todo?`<span class="badge">${todo}</span>`:""}${p.id==="alerts"&&S.rings?`<span class="badge">${S.rings}</span>`:""}</button>`).join("");
+  $$("#nav button").forEach(b => b.onclick = () => go(b.dataset.p));
+  $("#mnav").innerHTML = PAGES.filter(p=>p.id).map(p=>`<option value="${p.id}" ${S.page===p.id?"selected":""}>${p.label}${p.id==="settings"&&todo?` (${todo} to do)`:""}</option>`).join("");
+  $("#mnav").onchange = e => go(e.target.value);
+}
+function go(p){ if(!PAGES.some(x=>x.id===p)) p="home"; S.page=p; try{localStorage.setItem("td.page",p); history.replaceState(null,"","#"+p);}catch(e){} renderNav(); render(); window.scrollTo(0,0); }
+
+function headerHTML(){
+  const p = PAGES.find(x=>x.id===S.page);
+  const c = S.clock;
+  const mk = c ? `<span class="pill"><span class="dot ${c.open?"g":"r"}"></span>NYSE ${c.open?"open":"closed"} · ${esc((c.now_new_york||"").slice(11))} ET${!c.open&&c.next_open?` · opens ${esc(c.next_open.slice(5))}`:""}</span>` : "";
+  const paper = S.state?.config?.paper!==false ? `<span class="pill"><span class="dot y"></span>Paper trading</span>` : `<span class="pill"><span class="dot r"></span>Paper mode off</span>`;
+  return `<header class="top"><div><h1>${p.title}</h1><div class="sub">${p.sub}${p.skill?` · <span class="mono">${p.skill}</span>`:""}</div></div><div class="spacer"></div>${mk}${paper}</header>`;
+}
+
+function render(){
+  const m = $("#main");
+  m.innerHTML = headerHTML() + `<div id="page"></div><p class="disclaimer">Education and tooling, not financial advice. Prices are free delayed quotes (Yahoo, Stooq) and can lag. Day trading loses most people money. The dashboard never sends a live order and never sends any order without your typed yes.</p>`;
+  (VIEWS[S.page]||VIEWS.home)($("#page"));
+}
+
+/* ------------------------------------------------------------------ data loaders */
+async function loadState(){ S.state = await api("state"); renderNav(); }
+async function loadClock(){ try { S.clock = await api("clock"); const h=$("header.top"); if(h) h.outerHTML = headerHTML(); } catch(e){} }
+async function loadQuotes(symbols){
+  const syms = [...new Set(symbols.filter(Boolean))];
+  if(!syms.length) return {};
+  const r = await api("quotes", {symbols:syms});
+  Object.assign(S.quotes, r.quotes||{});
+  return r;
+}
+const q = s => S.quotes[s];
+const chg = s => { const x=q(s); return x && x.prev_close ? (x.price - x.prev_close) / x.prev_close * 100 : null; };
+
+/* ------------------------------------------------------------------ HOME / PORTFOLIO */
+function holdings(){
+  const pf = S.state?.portfolio; if(!pf) return [];
+  return (pf.positions||[]).map(p => {
+    const sh = +(p.shares ?? (p.lots||[]).reduce((a,l)=>a+(+l.shares||0),0));
+    const cost = (p.lots||[]).reduce((a,l)=>a+(+l.cost||0),0);
+    const t = (p.ticker||p.symbol||"").toUpperCase(); const x=q(t);
+    const price = x?.price ?? null; const value = price!=null ? price*sh : null;
+    const day = x && x.prev_close ? (price - x.prev_close)*sh : null;
+    return {t, sh, cost, avg: sh? cost/sh : null, price, value, pl: value!=null ? value-cost : null, plp: value!=null&&cost ? (value-cost)/cost*100 : null, day, dayp: chg(t)};
+  });
+}
+
+const VIEWS = {};
+VIEWS.home = async el => {
+  const st = S.state; const pf = st.portfolio;
+  const todo = st.checks.filter(c=>!c.ok && c.level!=="optional" && c.level!=="info");
+  el.innerHTML = (todo.length ? `<div class="card" style="border-color:var(--warn)"><h2>Finish setting up (${todo.length})</h2><p class="hint">A few things the skills need from you. Each takes under a minute.</p>${todo.map(c=>`<div class="check"><div class="ic no">!</div><div style="flex:1"><div class="t">${esc(c.title)}</div><div class="d">${esc(c.detail)}</div></div>${c.fix?`<button class="btn sm" data-fix="${c.fix}">Fix</button>`:""}</div>`).join("")}</div>` : "") +
+  `<div id="pf-tiles" class="tiles"></div>
+   <div class="card"><div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px"><div><h2>Holdings</h2><p class="hint" style="margin:0">${pf ? `Source: ${esc(pf.source||"manual")} · updated ${pf.updated_at?esc(fmtTime(pf.updated_at)):"—"}` : "No portfolio yet"}</p></div>
+   <div class="row"><button class="btn sm" id="pf-refresh" data-busy="Refreshing">Refresh prices</button>${st.has_alpaca?`<button class="btn sm" id="pf-sync" data-busy="Syncing">Sync from Alpaca</button>`:""}<button class="btn sm primary" id="pf-edit">${pf?"Edit holdings":"Add my holdings"}</button></div></div>
+   <div id="pf-table"></div></div>
+   <div class="grid g2"><div class="card"><h2>Watchlist today</h2><p class="hint">Biggest moves since yesterday's close</p><div id="home-watch"></div></div>
+   <div class="card"><h2>Quick actions</h2><p class="hint">Common things, one click</p>
+   <div class="grid g2" style="gap:10px">
+     <button class="btn" data-go="scan">Find today's setups</button><button class="btn" data-go="news">Morning news briefing</button>
+     <button class="btn" data-go="sim">Run the Time Machine</button><button class="btn" data-go="debate">Bull vs Bear on a stock</button>
+     <button class="btn" data-go="trade">Plan a trade</button><button class="btn" data-go="congress">What is Congress buying?</button>
+   </div></div></div>`;
+  $$("[data-go]",el).forEach(b=>b.onclick=()=>go(b.dataset.go));
+  $$("[data-fix]",el).forEach(b=>b.onclick=()=>{ if(b.dataset.fix==="portfolio") editPortfolio(); else if(b.dataset.fix==="watchlist") go("watch"); else go("settings"); });
+  $("#pf-edit").onclick = editPortfolio;
+  $("#pf-refresh").onclick = e => busy(e.currentTarget, async()=>{ await refreshHome(true); toast("Prices updated"); });
+  if($("#pf-sync")) $("#pf-sync").onclick = e => busy(e.currentTarget, async()=>{ const r=await api("alpaca_sync"); S.state.portfolio=r.portfolio; S.state.checks=r.checks; toast("Synced from Alpaca"); VIEWS.home(el); });
+  drawHome(); refreshHome(false);
+};
+async function refreshHome(force){
+  const syms = [...holdings().map(h=>h.t), ...S.state.tickers];
+  try { await loadQuotes(syms); } catch(e){ toast(e.message,true); }
+  if(S.page==="home") drawHome();
+}
+function drawHome(){
+  const pf = S.state.portfolio; const H = holdings();
+  const inv = H.reduce((a,h)=>a+(h.value??h.cost),0), cost=H.reduce((a,h)=>a+h.cost,0), day=H.reduce((a,h)=>a+(h.day||0),0);
+  const cash = pf ? +pf.cash : null; const total = pf ? inv + cash : null;
+  const prevInv = inv - day;
+  if($("#pf-tiles")) $("#pf-tiles").innerHTML = pf ? `
+    <div class="tile"><div class="k">Total value</div><div class="v">${money(total)}</div><div class="d">stocks + cash</div></div>
+    <div class="tile"><div class="k">Today</div><div class="v ${cls(day)}">${arrow(day)} ${money(Math.abs(day))}</div><div class="d ${cls(day)}">${pct(prevInv? day/prevInv*100 : 0,2)} on stocks</div></div>
+    <div class="tile"><div class="k">Total gain / loss</div><div class="v ${cls(inv-cost)}">${arrow(inv-cost)} ${money(Math.abs(inv-cost))}</div><div class="d ${cls(inv-cost)}">${pct(cost?(inv-cost)/cost*100:0,2)} vs what you paid</div></div>
+    <div class="tile"><div class="k">Cash</div><div class="v">${money(cash)}</div><div class="d">${total? (cash/total*100).toFixed(0)+"% of the account":""}</div></div>` :
+    `<div class="tile" style="grid-column:1/-1"><div class="k">No portfolio yet</div><div class="d" style="margin-top:4px">Add your US stock holdings and cash so you can see value and gains, and so sizing and the risk check use your real money.</div></div>`;
+  if($("#pf-table")) $("#pf-table").innerHTML = !H.length ? `<div class="empty">${pf?"No stock holdings, only cash.":"Click <b>Add my holdings</b> to enter your stocks."}</div>` :
+   `<div class="tw"><table><thead><tr><th>Stock</th><th class="n">Shares</th><th class="n">Avg cost</th><th class="n">Price</th><th class="n">Today</th><th class="n">Value</th><th class="n">Gain / loss</th><th class="n">Weight</th><th></th></tr></thead><tbody>${H.sort((a,b)=>(b.value??0)-(a.value??0)).map(h=>`<tr>
+    <td class="sym">${esc(h.t)}</td><td class="n">${h.sh.toLocaleString()}</td><td class="n">${money(h.avg)}</td><td class="n">${h.price==null?'<span class="muted">…</span>':money(h.price)}</td>
+    <td class="n ${cls(h.dayp)}">${h.dayp==null?"—":arrow(h.dayp)+" "+pct(Math.abs(h.dayp),2,false)}</td><td class="n">${money(h.value)}</td>
+    <td class="n ${cls(h.pl)}">${h.pl==null?"—":money(h.pl)+" <span class='tiny'>("+pct(h.plp,1)+")</span>"}</td><td class="n">${h.value!=null&&total?(h.value/total*100).toFixed(1)+"%":"—"}</td>
+    <td class="n"><button class="btn sm ghost" data-deb="${esc(h.t)}" title="Bull vs Bear">Debate</button><button class="btn sm ghost" data-sim="${esc(h.t)}">Replay</button></td></tr>`).join("")}</tbody></table></div>`;
+  $$("[data-deb]").forEach(b=>b.onclick=()=>{S.debateTicker=b.dataset.deb; go("debate");});
+  $$("[data-sim]").forEach(b=>b.onclick=()=>{S.simTicker=b.dataset.sim; go("sim");});
+  const W = S.state.tickers.map(t=>({t,c:chg(t),p:q(t)?.price})).filter(x=>x.p!=null).sort((a,b)=>Math.abs(b.c)-Math.abs(a.c)).slice(0,8);
+  if($("#home-watch")) $("#home-watch").innerHTML = !S.state.tickers.length ? `<div class="empty">Your watchlist is empty.</div>` : !W.length ? `<div class="empty"><span class="spin"></span></div>` :
+    `<table><tbody>${W.map(x=>`<tr><td class="sym">${esc(x.t)}</td><td class="n">${money(x.p)}</td><td class="n ${cls(x.c)}" style="width:110px">${arrow(x.c)} ${pct(Math.abs(x.c),2,false)}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function modal(html){
+  const d = document.createElement("dialog");
+  d.style.cssText = "border:1px solid var(--line-2);border-radius:14px;padding:0;background:var(--surface);color:var(--text);max-width:760px;width:calc(100% - 32px)";
+  d.innerHTML = `<div style="padding:20px">${html}</div>`;
+  document.body.appendChild(d); d.showModal(); d.addEventListener("close",()=>d.remove()); return d;
+}
+function editPortfolio(){
+  const pf = S.state.portfolio || {cash: S.state.config.budget, positions:[]};
+  const rows = (pf.positions||[]).map(p=>{ const sh=+p.shares; const cost=(p.lots||[]).reduce((a,l)=>a+(+l.cost||0),0); return {t:p.ticker, sh, avg: sh? (cost/sh).toFixed(2):""}; });
+  const rowHTML = r => `<tr><td><input type="text" class="pt" value="${esc(r.t||"")}" placeholder="AAPL" style="text-transform:uppercase"></td><td><input type="number" class="ps" value="${esc(r.sh||"")}" min="0" step="any" placeholder="10"></td><td><input type="number" class="pa" value="${esc(r.avg||"")}" min="0" step="any" placeholder="185.00"></td><td><button class="btn sm ghost" data-rm>✕</button></td></tr>`;
+  const d = modal(`<h2 style="margin:0 0 4px">My holdings</h2><p class="hint">Your US stocks and the cash in your trading account. Saved only on this computer.</p>
+   <label class="f" style="max-width:220px">Cash ($)<input type="number" id="m-cash" value="${esc(pf.cash??"")}" min="0" step="any"></label>
+   <div class="tw" style="margin-top:12px"><table><thead><tr><th>Ticker</th><th>Shares</th><th>Average price paid ($)</th><th></th></tr></thead><tbody id="m-rows">${(rows.length?rows:[{}]).map(rowHTML).join("")}</tbody></table></div>
+   <button class="btn sm" id="m-add" style="margin-top:8px">+ Add a stock</button>
+   <div id="m-err"></div>
+   <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="m-cancel">Cancel</button><button class="btn primary" id="m-save" data-busy="Saving">Save</button></div>`);
+  const wire = () => $$("[data-rm]",d).forEach(b=>b.onclick=()=>b.closest("tr").remove());
+  wire();
+  $("#m-add",d).onclick = () => { $("#m-rows",d).insertAdjacentHTML("beforeend", rowHTML({})); wire(); };
+  $("#m-cancel",d).onclick = () => d.close();
+  $("#m-save",d).onclick = e => busy(e.currentTarget, async()=>{
+    const positions = $$("#m-rows tr",d).map(tr=>({ticker:$(".pt",tr).value.trim(), shares:$(".ps",tr).value, avg_cost:$(".pa",tr).value})).filter(r=>r.ticker);
+    try { const r = await api("portfolio", {cash:$("#m-cash",d).value, positions}); S.state.portfolio=r.portfolio; S.state.checks=r.checks; d.close(); toast("Portfolio saved"); renderNav(); render(); }
+    catch(err){ $("#m-err",d).innerHTML = errBox(err); throw err; }
+  }).catch(()=>{});
+}
+
+/* ------------------------------------------------------------------ WATCHLIST */
+VIEWS.watch = async el => {
+  el.innerHTML = `<div class="card"><h2>Add tickers</h2><p class="hint">Type one or more, separated by spaces or commas, then press Add. Every skill uses this list by default.</p>
+    <div class="row"><label class="f grow"><span class="sr">Tickers</span><input type="text" id="w-in" placeholder="e.g. AAPL, MSFT, KO" style="text-transform:uppercase"></label><button class="btn primary" id="w-add">Add</button></div>
+    <div id="w-err"></div></div>
+    <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>My watchlist <span class="muted small" id="w-count"></span></h2><button class="btn sm" id="w-ref" data-busy="Refreshing">Refresh prices</button></div><div id="w-table" style="margin-top:10px"></div></div>`;
+  const save = async list => { const r = await api("watchlist",{tickers:list}); S.state.tickers=r.tickers; drawWatch(); renderNav(); };
+  const add = async () => {
+    const vals = $("#w-in").value.toUpperCase().split(/[\s,;]+/).filter(Boolean);
+    if(!vals.length) return;
+    try { await save([...S.state.tickers, ...vals]); $("#w-in").value=""; $("#w-err").innerHTML=""; toast("Added "+vals.join(", ")); loadQuotes(vals).then(drawWatch).catch(()=>{}); }
+    catch(e){ $("#w-err").innerHTML = errBox(e); }
+  };
+  $("#w-add").onclick = add; $("#w-in").onkeydown = e => { if(e.key==="Enter") add(); };
+  $("#w-ref").onclick = e => busy(e.currentTarget, async()=>{ await loadQuotes(S.state.tickers); drawWatch(); });
+  S.saveWatch = save;
+  drawWatch(); loadQuotes(S.state.tickers).then(drawWatch).catch(e=>toast(e.message,true));
+};
+function drawWatch(){
+  const T = S.state.tickers; if(!$("#w-table")) return;
+  $("#w-count").textContent = `· ${T.length}`;
+  $("#w-table").innerHTML = !T.length ? `<div class="empty">No tickers yet. Add some above.</div>` :
+   `<div class="tw"><table><thead><tr><th>Stock</th><th class="n">Price</th><th class="n">Today</th><th class="n hide-m">Day range</th><th class="n hide-m">Prev close</th><th class="n">Actions</th></tr></thead><tbody>${T.map((t,i)=>{const x=q(t),c=chg(t);return `<tr>
+   <td class="sym">${esc(t)}</td><td class="n">${x?money(x.price):'<span class="muted">…</span>'}</td><td class="n ${cls(c)}" style="white-space:nowrap">${c==null?"—":arrow(c)+" "+pct(Math.abs(c),2,false)}</td>
+   <td class="n muted hide-m">${x&&x.low?money(x.low)+" – "+money(x.high):"—"}</td><td class="n muted hide-m">${x?money(x.prev_close):"—"}</td>
+   <td class="n acts"><button class="btn sm ghost" data-a="news" data-t="${esc(t)}">News</button><button class="btn sm ghost" data-a="earn" data-t="${esc(t)}">Earnings</button><button class="btn sm ghost" data-a="debate" data-t="${esc(t)}">Debate</button><button class="btn sm ghost" data-a="sim" data-t="${esc(t)}">Replay</button><button class="btn sm ghost" data-a="trade" data-t="${esc(t)}">Trade</button>
+   <button class="btn sm ghost" title="Move up" data-up="${i}" ${i?"":"disabled"}>↑</button><button class="btn sm ghost danger" title="Remove" data-rm="${i}">✕</button></td></tr>`}).join("")}</tbody></table></div>`;
+  $$("[data-rm]").forEach(b=>b.onclick=()=>{ const l=[...T]; const [x]=l.splice(+b.dataset.rm,1); S.saveWatch(l).then(()=>toast("Removed "+x)); });
+  $$("[data-up]").forEach(b=>b.onclick=()=>{ const i=+b.dataset.up,l=[...T]; [l[i-1],l[i]]=[l[i],l[i-1]]; S.saveWatch(l); });
+  $$("[data-a]").forEach(b=>b.onclick=()=>{ const t=b.dataset.t; ({news:()=>S.newsTicker=t, earn:()=>S.earnTicker=t, debate:()=>S.debateTicker=t, sim:()=>S.simTicker=t, trade:()=>S.trade={step:1,ticker:t}})[b.dataset.a](); go(b.dataset.a); });
+}
+
+/* ------------------------------------------------------------------ SCANNER */
+const SETUP_NAMES = {breakout_20d:"20-day breakout", bull_flag:"Bull flag", reclaim_20dma:"Back above 20-day avg", oversold:"Oversold", oversold_bounce:"Oversold bounce", orb:"Opening-range breakout"};
+const SETUP_HELP = {breakout_20d:"Closed at its highest close in 20 days", bull_flag:"A strong run-up, then a tight pause", reclaim_20dma:"Closed back above its 20-day average", oversold:"Fell hard; RSI under 30", oversold_bounce:"Was oversold and is turning up"};
+VIEWS.scan = el => {
+  const s = S.scanOpts || (S.scanOpts={mode:"daily", scope:"watchlist", limit:300});
+  el.innerHTML = `<div class="card"><h2>What to scan</h2><p class="hint"><b>Daily setups</b> uses yesterday's closes, best before the open. <b>Opening-range breakout</b> looks at today's 5-minute bars, after 9:50 AM New York time.</p>
+   <div class="row"><div><div class="tiny muted" style="margin-bottom:4px">Scan type</div><div class="seg" id="sc-mode"><button data-v="daily">Daily setups</button><button data-v="orb">Opening-range breakout</button></div></div>
+   <div><div class="tiny muted" style="margin-bottom:4px">Stocks</div><div class="seg" id="sc-scope"><button data-v="watchlist">My watchlist</button><button data-v="portfolio">My portfolio</button><button data-v="market">Whole market</button></div></div>
+   <label class="f" id="sc-lim-w">How many (whole market)<input type="number" id="sc-lim" class="sm" value="${s.limit}" min="10" step="50"></label>
+   <label class="f">Min price ($)<input type="number" id="sc-minp" class="sm" value="5" min="0"></label>
+   <button class="btn primary" id="sc-go" data-busy="Scanning">Run scan</button></div>
+   <p class="tiny muted" id="sc-note" style="margin:10px 0 0"></p></div><div id="sc-out">${S.cache.scan||""}</div>`;
+  const seg = (id,key) => { $$(`#${id} button`).forEach(b=>{ b.classList.toggle("on", s[key]===b.dataset.v); b.onclick=()=>{ s[key]=b.dataset.v; VIEWS.scan(el); }; }); };
+  seg("sc-mode","mode"); seg("sc-scope","scope");
+  $("#sc-lim-w").style.display = s.scope==="market"?"":"none";
+  $("#sc-note").textContent = s.scope==="market" ? `About ${Math.round(s.limit*0.4/60)+1} minute(s) for ${s.limit} stocks. The first whole-market scan also downloads the list of US stocks.` : "";
+  $("#sc-lim").onchange = e => { s.limit=+e.target.value; VIEWS.scan(el); };
+  $("#sc-go").onclick = e => busy(e.currentTarget, async()=>{
+    try { const r = await api("scan", {mode:s.mode, scope:s.scope, limit:s.limit, min_price:$("#sc-minp").value}); S.cache.scan = scanHTML(r); }
+    catch(err){ S.cache.scan = errBox(err); }
+    if($("#sc-out")){ $("#sc-out").innerHTML = S.cache.scan; wireScan(); }
+  }).catch(()=>{});
+  wireScan();
+};
+function scanHTML(r){
+  const H = r.hits||[]; const c=r.counts||{};
+  return `<div class="tiles"><div class="tile"><div class="k">Scanned</div><div class="v">${(c.scanned??r.scanned??0).toLocaleString()}</div><div class="d">${esc(r.as_of||"")}</div></div>
+   <div class="tile"><div class="k">Setups found</div><div class="v">${H.length}</div><div class="d">${esc(r.mode==="orb"?"opening-range breakouts":"daily setups")}</div></div>
+   <div class="tile"><div class="k">Left out</div><div class="v">${((c.illiquid||0)+(c.short||0)+(r.failed||0))}</div><div class="d">too thin, too new, or no data</div></div></div>
+   <div class="card"><h2>Results</h2><p class="hint">${esc(r.note||"")}</p>${!H.length?`<div class="empty">Nothing matched today. That's normal; most days only a few charts qualify.</div>`:
+   `<div class="tw"><table><thead><tr><th>Stock</th><th>Setup</th><th class="n">Price</th><th class="n">RSI</th><th class="n">Volume</th><th class="n">Level</th><th class="n"></th></tr></thead><tbody>${H.map(h=>`<tr>
+   <td class="sym">${esc(h.symbol)}</td><td>${(h.setups||[h.setup||"orb"]).map(x=>`<span class="chip" title="${esc(SETUP_HELP[x]||"")}">${esc(SETUP_NAMES[x]||x)}</span>`).join("")}</td>
+   <td class="n">${money(h.price??h.last??h.close)}</td><td class="n">${h.rsi??"—"}</td><td class="n">${h.volume?(+h.volume).toLocaleString():"—"}</td>
+   <td class="n">${h.level?money(h.level):h.or_high?money(h.or_high):"—"}</td>
+   <td class="n" style="white-space:nowrap"><button class="btn sm ghost" data-wadd="${esc(h.symbol)}">+ Watchlist</button><button class="btn sm ghost" data-deb="${esc(h.symbol)}">Debate</button><button class="btn sm" data-tr="${esc(h.symbol)}" data-lvl="${esc(h.level||"")}">Plan trade</button></td></tr>`).join("")}</tbody></table></div>`}</div>`;
+}
+function wireScan(){
+  $$("[data-wadd]").forEach(b=>b.onclick=async()=>{ try{ const r=await api("watchlist",{tickers:[...S.state.tickers,b.dataset.wadd]}); S.state.tickers=r.tickers; toast("Added "+b.dataset.wadd); }catch(e){toast(e.message,true);} });
+  $$("[data-deb]").forEach(b=>b.onclick=()=>{S.debateTicker=b.dataset.deb; go("debate");});
+  $$("[data-tr]").forEach(b=>b.onclick=()=>{S.trade={step:1,ticker:b.dataset.tr,level:b.dataset.lvl}; go("trade");});
+}
+
+/* ------------------------------------------------------------------ NEWS */
+const TAG_STYLE = {earnings:"wait", halt:"no", bankruptcy:"no", restatement:"no", regulatory:"wait", deal:"ok", analyst:"neutral", macro:"neutral"};
+VIEWS.news = el => {
+  const pre = S.newsTicker || ""; S.newsTicker = null;
+  el.innerHTML = `<div class="card"><h2>Check the news</h2><p class="hint">Leave tickers empty to check your whole watchlist and portfolio. SEC filings (8-K) ${S.state.checks.find(c=>c.key==="sec")?.ok?"are included":"need your name and email in Settings"}.</p>
+   <div class="row"><label class="f grow">Tickers (optional)<input type="text" id="n-t" value="${esc(pre)}" placeholder="all my stocks" style="text-transform:uppercase"></label>
+   <label class="f">Look back<select id="n-h"><option value="12">12 hours</option><option value="24" selected>24 hours</option><option value="72">3 days</option><option value="168">7 days</option></select></label>
+   <button class="btn primary" id="n-go" data-busy="Reading the news">Get news</button></div><p class="tiny muted" style="margin:8px 0 0">Takes about a minute for 10 stocks.</p></div><div id="n-out">${S.cache.news||""}</div>`;
+  const runIt = e => busy(e, async()=>{
+    const t = $("#n-t").value.toUpperCase().split(/[\s,;]+/).filter(Boolean);
+    try { const r = await api("news",{tickers:t, hours:$("#n-h").value}); S.cache.news = newsHTML(r); } catch(err){ S.cache.news = errBox(err); }
+    if($("#n-out")) $("#n-out").innerHTML = S.cache.news;
+  }).catch(()=>{});
+  $("#n-go").onclick = e => runIt(e.currentTarget);
+  if(pre) runIt($("#n-go"));
+};
+function newsHTML(r){
+  const items = r.items||[], moves=(r.moves||[]).sort((a,b)=>Math.abs(b.pct)-Math.abs(a.pct));
+  return `<div class="grid" style="grid-template-columns:minmax(0,1fr) 300px" id="n-grid"><div class="card"><h2>Headlines & filings <span class="muted small">· ${items.length}</span></h2><p class="hint">Newest first, New York time</p>
+    ${!items.length?`<div class="empty">No news in that window.</div>`:items.map(i=>`<div class="news-item"><div class="when">${esc(fmtTime(i.time))}<div>${(i.touches||[i.ticker]).filter(Boolean).map(t=>`<span class="chip sym">${esc(t)}</span>`).join("")}</div></div>
+    <div><a class="t" href="${esc(i.link)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a>${i.new?` <span class="status ok" style="font-size:11px;padding:0 6px">new</span>`:""}
+    <div class="small muted">${esc(i.source)}${i.kind==="filing"&&i.form?" · Form "+esc(i.form):""}</div>${i.summary?`<div class="small" style="color:var(--text-2);margin-top:3px">${esc(i.summary).slice(0,280)}</div>`:""}
+    <div style="margin-top:4px">${(i.tags||[]).map(t=>`<span class="status ${TAG_STYLE[t]||"neutral"}" style="font-size:11px;padding:1px 7px;margin-right:4px">${esc(t)}</span>`).join("")}</div></div></div>`).join("")}</div>
+    <div class="card"><h2>Moves since yesterday</h2><p class="hint">Flagged when ${"over"} the move threshold</p>${!moves.length?`<div class="empty">—</div>`:`<table><tbody>${moves.map(m=>`<tr><td class="sym">${esc(m.ticker)}</td><td class="n">${money(m.price)}</td><td class="n ${cls(m.pct)}">${arrow(m.pct)} ${pct(Math.abs(m.pct),2,false)}${m.moving?" ●":""}</td></tr>`).join("")}</tbody></table>`}
+    ${r.sec_included?"":`<div class="msg info small">SEC filings were skipped. Add your name and email in Settings to include them.</div>`}</div></div>
+    <style>@media(max-width:900px){#n-grid{grid-template-columns:1fr!important}}</style>`;
+}
+
+/* ------------------------------------------------------------------ EARNINGS */
+VIEWS.earn = el => {
+  const pre = S.earnTicker || ""; S.earnTicker=null;
+  el.innerHTML = `<div class="card"><h2>Pick a company</h2><p class="hint">Reported numbers straight from the company's 10-Q and 10-K filings at the SEC.</p>
+   <div class="row"><label class="f">Ticker<input type="text" id="e-t" class="sm" value="${esc(pre)}" placeholder="AAPL" style="text-transform:uppercase;width:140px"></label>
+   <label class="f">Quarters<select id="e-q"><option>4</option><option selected>8</option><option>12</option></select></label>
+   <button class="btn primary" id="e-go" data-busy="Reading filings">Show earnings</button>
+   <div class="row" style="gap:6px">${S.state.tickers.slice(0,8).map(t=>`<button class="btn sm ghost" data-q="${esc(t)}">${esc(t)}</button>`).join("")}</div></div></div><div id="e-out">${S.cache.earn||""}</div>`;
+  const runIt = () => { const tk=$("#e-t").value, qn=$("#e-q").value; busy($("#e-go"), async()=>{
+    try { const r = await api("earnings",{ticker:tk, quarters:qn}); S.cache.earn = earnHTML(r); }
+    catch(err){ S.cache.earn = errBox(err) + (/SEC/.test(err.message)?`<button class="btn" onclick="go('settings')">Open Settings</button>`:""); }
+    if($("#e-out")){ $("#e-out").innerHTML = S.cache.earn; wireEarn(); }
+  }).catch(()=>{}); };
+  $("#e-go").onclick = runIt; $("#e-t").onkeydown = e => { if(e.key==="Enter") runIt(); };
+  $$("[data-q]",el).forEach(b=>b.onclick=()=>{ $("#e-t").value=b.dataset.q; runIt(); });
+  if(pre) runIt(); else wireEarn();
+};
+function earnHTML(r){
+  const x = (Array.isArray(r)?r[0]:r)||{}; if(x.error) return errBox({message:x.error});
+  const R = x.result||{}; const rows=(R.rows||[]).slice(); const L=rows[0]||{}; const ttm=R.ttm||{};
+  const tile = (k,v,d,c="") => `<div class="tile"><div class="k">${k}</div><div class="v ${c}">${v}</div><div class="d">${d}</div></div>`;
+  S.earnRows = rows.slice().reverse();
+  return `<div class="card" style="padding:14px 18px"><b style="font-size:17px">${esc(R.entity||x.ticker)}</b> <span class="muted">· ${esc(x.ticker)} · latest ${esc(L.fiscal||"")} (${esc(L.form||"")}, filed ${esc(L.filed||"")})</span></div>
+  <div class="tiles">${tile("Revenue "+esc(L.fiscal||""), big(L.revenue), (L.revenue_yoy!=null?`<span class="${cls(L.revenue_yoy)}">${pct(L.revenue_yoy)}</span> vs a year ago`:""))}
+   ${tile("Net income", big(L.net_income), (L.net_income_yoy!=null?`<span class="${cls(L.net_income_yoy)}">${pct(L.net_income_yoy)}</span> vs a year ago`:""))}
+   ${tile("EPS (diluted)", L.eps_diluted!=null?"$"+(+L.eps_diluted).toFixed(2):"—", (L.eps_yoy!=null?`<span class="${cls(L.eps_yoy)}">${pct(L.eps_yoy)}</span> vs a year ago`:""))}
+   ${tile("Operating margin", L.operating_margin!=null?L.operating_margin.toFixed(1)+"%":"—", "gross "+(L.gross_margin!=null?L.gross_margin.toFixed(1)+"%":"—")+" · net "+(L.net_margin!=null?L.net_margin.toFixed(1)+"%":"—"))}
+   ${tile("Trailing 12 months", big(ttm.revenue), "revenue · net income "+big(ttm.net_income))}</div>
+  <div class="card"><div class="row" style="justify-content:space-between"><div><h2>Quarter by quarter</h2><p class="hint" style="margin:0">Hover a bar for the numbers</p></div><div class="seg" id="e-metric"><button data-m="revenue" class="on">Revenue</button><button data-m="net_income">Net income</button><button data-m="eps_diluted">EPS</button></div></div>
+   <div class="chart" id="e-chart" style="margin-top:12px"></div></div>
+  <div class="card"><h2>The numbers</h2><div class="tw"><table><thead><tr><th>Quarter</th><th>Ended</th><th class="n">Revenue</th><th class="n">vs yr ago</th><th class="n">Gross margin</th><th class="n">Op. margin</th><th class="n">Net income</th><th class="n">vs yr ago</th><th class="n">EPS</th><th>Filing</th></tr></thead>
+  <tbody>${rows.map(w=>`<tr><td><b>${esc(w.fiscal)}</b></td><td class="muted">${esc(w.end)}</td><td class="n">${big(w.revenue)}</td><td class="n ${cls(w.revenue_yoy)}">${pct(w.revenue_yoy)}</td><td class="n">${w.gross_margin!=null?w.gross_margin.toFixed(1)+"%":"—"}</td><td class="n">${w.operating_margin!=null?w.operating_margin.toFixed(1)+"%":"—"}</td><td class="n">${big(w.net_income)}</td><td class="n ${cls(w.net_income_yoy)}">${pct(w.net_income_yoy)}</td><td class="n">${w.eps_diluted!=null?"$"+(+w.eps_diluted).toFixed(2):"—"}</td><td class="muted small">${esc(w.form||"")}${w.derived?" *":""}</td></tr>`).join("")}</tbody></table></div>
+  <p class="tiny muted">* Q4 is worked out as the full year minus the first three quarters, because companies report Q4 inside the 10-K.</p>
+  ${(R.filings||[]).length?`<details><summary>Latest filings</summary>${R.filings.map(f=>`<div class="small"><a href="${esc(f.url||f.link)}" target="_blank" rel="noopener noreferrer">${esc(f.form)} · ${esc(f.filed||f.date)}</a> ${esc(f.description||"")}</div>`).join("")}</details>`:""}</div>`;
+}
+function wireEarn(){
+  if(!$("#e-chart")) return;
+  const draw = m => barChart($("#e-chart"), S.earnRows.map(r=>({label:r.fiscal, v:r[m], yoy: m==="revenue"?r.revenue_yoy:m==="net_income"?r.net_income_yoy:r.eps_yoy})), m==="eps_diluted" ? v=>"$"+v.toFixed(2) : big);
+  $$("#e-metric button").forEach(b=>b.onclick=()=>{ $$("#e-metric button").forEach(x=>x.classList.toggle("on",x===b)); draw(b.dataset.m); });
+  draw("revenue");
+}
+
+/* ------------------------------------------------------------------ charts */
+function niceTicks(lo, hi, n=5){
+  const span = hi-lo || Math.abs(hi)||1; const step0 = span/n; const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const step = [1,2,2.5,5,10].map(s=>s*mag).find(s=>s>=step0) || mag*10;
+  const out=[]; for(let v=Math.ceil(lo/step)*step; v<=hi+1e-9; v+=step) out.push(+v.toFixed(10)); return out;
+}
+function barChart(el, data, fmt){
+  const W=760,H=260,ml=64,mr=12,mt=12,mb=30; const iw=W-ml-mr, ih=H-mt-mb;
+  const vals = data.map(d=>d.v).filter(v=>v!=null); const lo=Math.min(0,...vals), hi=Math.max(0,...vals);
+  const ticks = niceTicks(lo,hi,4); const y0=ticks[0], y1=ticks[ticks.length-1];
+  const y = v => mt + ih - (v-y0)/(y1-y0||1)*ih; const bw = iw/data.length;
+  const barW = Math.min(44, bw*0.62);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar chart"><g class="grid">${ticks.map(t=>`<line x1="${ml}" x2="${W-mr}" y1="${y(t)}" y2="${y(t)}"/>`).join("")}</g>
+   <g class="axis">${ticks.map(t=>`<text x="${ml-8}" y="${y(t)+4}" text-anchor="end">${esc(fmt(t))}</text>`).join("")}${data.map((d,i)=>`<text x="${ml+bw*i+bw/2}" y="${H-8}" text-anchor="middle">${esc(d.label)}</text>`).join("")}</g>`;
+  data.forEach((d,i)=>{ if(d.v==null) return; const x=ml+bw*i+(bw-barW)/2, yt=y(Math.max(d.v,0)), yb=y(Math.min(d.v,0)); const h=Math.max(1,yb-yt); const r=Math.min(4,h/2);
+    const path = d.v>=0 ? `M${x},${yb}V${yt+r}Q${x},${yt} ${x+r},${yt}H${x+barW-r}Q${x+barW},${yt} ${x+barW},${yt+r}V${yb}Z` : `M${x},${yt}V${yb-r}Q${x},${yb} ${x+r},${yb}H${x+barW-r}Q${x+barW},${yb} ${x+barW},${yb-r}V${yt}Z`;
+    s += `<path d="${path}" fill="${d.v>=0?"var(--s1)":"var(--bad)"}" opacity="${i===data.length-1?1:.82}"/><rect x="${ml+bw*i}" y="${mt}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`; });
+  s += `<line x1="${ml}" x2="${W-mr}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line-2)"/></svg><div class="tip"></div>`;
+  el.innerHTML = s; const tip=$(".tip",el);
+  $$("rect[data-i]",el).forEach(r=>{ r.onmousemove = e => { const d=data[+r.dataset.i]; tip.style.display="block"; tip.innerHTML=`<div class="h">${esc(d.label)}</div><div class="r"><span>Value</span><b>${esc(fmt(d.v))}</b></div>${d.yoy!=null?`<div class="r"><span>vs a year ago</span><b class="${cls(d.yoy)}">${pct(d.yoy)}</b></div>`:""}`; const b=el.getBoundingClientRect(); let lx=e.clientX-b.left+14; if(lx>b.width-170) lx-=190; tip.style.left=lx+"px"; tip.style.top=(e.clientY-b.top-10)+"px"; }; r.onmouseleave=()=>tip.style.display="none"; });
+}
+function fanChart(el, tm){
+  const m=tm.mc, p=tm.plan; const B=m.bands||[], T=m.band_times||[]; if(!B.length){ el.innerHTML='<div class="empty">No paths to draw.</div>'; return; }
+  const W=760,H=320,ml=58,mr=70,mt=14,mb=28, iw=W-ml-mr, ih=H-mt-mb;
+  let lo=Math.min(p.stop, ...B.map(b=>b[0])), hi=Math.max(p.target, ...B.map(b=>b[4])); const pad=(hi-lo)*0.06; lo-=pad; hi+=pad;
+  const ticks=niceTicks(lo,hi,5); const x=i=>ml+i/(B.length-1||1)*iw, y=v=>mt+ih-(v-lo)/(hi-lo)*ih;
+  const area=(a,b)=>"M"+B.map((r,i)=>`${x(i)},${y(r[a])}`).join("L")+"L"+B.map((r,i)=>`${x(B.length-1-i)},${y(B[B.length-1-i][b])}`).join("L")+"Z";
+  const line=k=>"M"+B.map((r,i)=>`${x(i)},${y(r[k])}`).join("L");
+  const xt = T.map((t,i)=>({t,i})).filter(o=>o.t.endsWith(":00")||o.i===0);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Fan chart of simulated price paths">
+   <g class="grid">${ticks.filter(t=>t>=lo&&t<=hi).map(t=>`<line x1="${ml}" x2="${ml+iw}" y1="${y(t)}" y2="${y(t)}"/>`).join("")}</g>
+   <g class="axis">${ticks.filter(t=>t>=lo&&t<=hi).map(t=>`<text x="${ml-8}" y="${y(t)+4}" text-anchor="end">${t.toFixed(t>=100?0:2)}</text>`).join("")}${xt.map(o=>`<text x="${x(o.i)}" y="${H-8}" text-anchor="middle">${esc(o.t)}</text>`).join("")}</g>
+   <path d="${area(0,4)}" fill="var(--band-outer)" opacity=".75"/><path d="${area(1,3)}" fill="var(--band-inner)" opacity=".8"/>
+   <path d="${line(2)}" fill="none" stroke="var(--median)" stroke-width="2"/>
+   <line x1="${ml}" x2="${ml+iw}" y1="${y(p.target)}" y2="${y(p.target)}" stroke="var(--good)" stroke-width="2" stroke-dasharray="6 4"/>
+   <line x1="${ml}" x2="${ml+iw}" y1="${y(p.stop)}" y2="${y(p.stop)}" stroke="var(--bad)" stroke-width="2" stroke-dasharray="6 4"/>
+   <line x1="${ml}" x2="${ml+iw}" y1="${y(p.entry)}" y2="${y(p.entry)}" stroke="var(--text-2)" stroke-width="1" stroke-dasharray="2 3"/>
+   <text x="${ml+iw+6}" y="${y(p.target)+4}" fill="var(--text)" font-size="11.5" font-weight="600">Target ${(+p.target).toFixed(2)}</text>
+   <text x="${ml+iw+6}" y="${y(p.entry)+4}" fill="var(--text-2)" font-size="11.5">Entry ${(+p.entry).toFixed(2)}</text>
+   <text x="${ml+iw+6}" y="${y(p.stop)+4}" fill="var(--text)" font-size="11.5" font-weight="600">Stop ${(+p.stop).toFixed(2)}</text>
+   <line id="fx" y1="${mt}" y2="${mt+ih}" stroke="var(--text-2)" stroke-width="1" style="display:none"/>
+   <rect x="${ml}" y="${mt}" width="${iw}" height="${ih}" fill="transparent" id="fhit"/></svg><div class="tip"></div>
+   <div class="legend"><span><i style="background:var(--band-outer)"></i>90% of paths</span><span><i style="background:var(--band-inner)"></i>Middle half</span><span><i style="background:var(--median);height:2px;vertical-align:3px"></i>Median path</span><span><i style="background:var(--good);height:2px;vertical-align:3px"></i>Target</span><span><i style="background:var(--bad);height:2px;vertical-align:3px"></i>Stop</span></div>`;
+  const tip=$(".tip",el), fx=$("#fx",el), hit=$("#fhit",el), svg=$("svg",el);
+  hit.onmousemove = e => { const r=svg.getBoundingClientRect(); const sx=(e.clientX-r.left)/r.width*W; const i=Math.max(0,Math.min(B.length-1,Math.round((sx-ml)/iw*(B.length-1)))); const b=B[i];
+    fx.setAttribute("x1",x(i)); fx.setAttribute("x2",x(i)); fx.style.display="";
+    tip.style.display="block"; tip.innerHTML=`<div class="h">${esc(T[i]||"")} ET</div><div class="r"><span>High end (95%)</span><b>${b[4].toFixed(2)}</b></div><div class="r"><span>Upper quarter</span><b>${b[3].toFixed(2)}</b></div><div class="r"><span>Median</span><b>${b[2].toFixed(2)}</b></div><div class="r"><span>Lower quarter</span><b>${b[1].toFixed(2)}</b></div><div class="r"><span>Low end (5%)</span><b>${b[0].toFixed(2)}</b></div>`;
+    const px=x(i)/W*r.width; tip.style.left=(px>r.width-190?px-190:px+12)+"px"; tip.style.top="10px"; };
+  hit.onmouseleave = () => { tip.style.display="none"; fx.style.display="none"; };
+}
+function histChart(el, tm){
+  const h=tm.mc.hist, p=tm.plan; if(!h) return; const n=h.bins.length, w=(h.hi-h.lo)/n; const max=Math.max(...h.bins), tot=h.bins.reduce((a,b)=>a+b,0);
+  const W=760,H=170,ml=12,mr=12,mt=8,mb=26, iw=W-ml-mr, ih=H-mt-mb, bw=iw/n;
+  const xv=v=>ml+(v-h.lo)/(h.hi-h.lo)*iw;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Where the price ends the day">${h.bins.map((c,i)=>{ const mid=h.lo+w*(i+.5); const hh=c/max*ih; const col = mid>=p.target?"var(--good)":mid<=p.stop?"var(--bad)":"var(--s1)"; return `<rect x="${ml+i*bw+1}" y="${mt+ih-hh}" width="${bw-2}" height="${hh}" rx="2" fill="${col}" opacity=".85"/><rect x="${ml+i*bw}" y="${mt}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`; }).join("")}
+   <g class="axis"><text x="${ml}" y="${H-6}">${h.lo.toFixed(2)}</text><text x="${W-mr}" y="${H-6}" text-anchor="end">${h.hi.toFixed(2)}</text>${p.entry>h.lo&&p.entry<h.hi?`<text x="${xv(p.entry)}" y="${H-6}" text-anchor="middle">entry ${(+p.entry).toFixed(2)}</text>`:""}</g></svg><div class="tip"></div>`;
+  const tip=$(".tip",el);
+  $$("rect[data-i]",el).forEach(r=>{ r.onmousemove=e=>{ const i=+r.dataset.i; tip.style.display="block"; tip.innerHTML=`<div class="h">${(h.lo+w*i).toFixed(2)} – ${(h.lo+w*(i+1)).toFixed(2)}</div><div class="r"><span>Replays ending here</span><b>${(h.bins[i]/tot*100).toFixed(1)}%</b></div>`; const b=el.getBoundingClientRect(); let lx=e.clientX-b.left+12; if(lx>b.width-180) lx-=200; tip.style.left=lx+"px"; tip.style.top="0px"; }; r.onmouseleave=()=>tip.style.display="none"; });
+}
+
+/* ------------------------------------------------------------------ TIME MACHINE */
+function simResultHTML(r, id="tm"){
+  const m=r.mc, h=r.history, p=r.plan;
+  const pt=m.p_target*100, ps=m.p_stop*100, pn=m.p_neither*100;
+  const lean = pt>=ps ? "ok" : pt>=ps*0.6 ? "wait" : "no";
+  return `${(r.dashboard_notes||[]).map(n=>box("info",esc(n))).join("")}${(r.warnings||[]).length?box("warn",r.warnings.map(esc).join("<br>")):""}
+  <div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2>${esc(p.symbol)}: buy ${money(p.entry)}, stop ${money(p.stop)}, target ${money(p.target)}</h2>
+   <p class="hint" style="margin:0">${(+m.replays).toLocaleString()} replays of the rest of the day from ${esc(p.entry_time)} to ${esc(m.until)}, built from ${m.pool_sessions} real sessions (${esc(m.pool_from)} to ${esc(m.pool_to)}). Risk ${money(p.risk_per_share)} a share, target ${(+p.target_r).toFixed(1)}R.</p></div>
+   <span class="status ${lean}">${pt>=ps?"Leans to target":"Leans to stop"}</span></div>
+   <div style="margin-top:14px"><div class="oddsbar" role="img" aria-label="Odds: target first ${pt.toFixed(0)}%, neither ${pn.toFixed(0)}%, stop first ${ps.toFixed(0)}%">
+    <div style="width:${pt}%;background:var(--good)">${pt>=9?"Target "+pt.toFixed(0)+"%":""}</div><div style="width:${pn}%;background:var(--line-2);color:var(--text)">${pn>=12?"Neither "+pn.toFixed(0)+"%":""}</div><div style="width:${ps}%;background:var(--bad)">${ps>=9?"Stop "+ps.toFixed(0)+"%":""}</div></div>
+    <div class="legend"><span><i style="background:var(--good)"></i>Target hit first ${pt.toFixed(1)}%</span><span><i style="background:var(--line-2)"></i>Neither by ${esc(m.until)} ${pn.toFixed(1)}%</span><span><i style="background:var(--bad)"></i>Stop hit first ${ps.toFixed(1)}%</span></div></div>
+   <div class="msg ${lean==="ok"?"ok":lean==="wait"?"warn":"err"}" style="margin-top:12px"><b>Verdict:</b> ${esc(r.verdict)}${(r.verdict_notes||[]).map(n=>"<br>"+esc(n)).join("")}</div></div>
+  <div class="tiles"><div class="tile"><div class="k">Average result</div><div class="v ${cls(m.avg_R)}">${m.avg_R>0?"+":""}${(+m.avg_R).toFixed(2)}R</div><div class="d">≈ ${money(m.avg_R*p.risk_per_share)} a share, per trade</div></div>
+   <div class="tile"><div class="k">Typical close</div><div class="v">${money(m.median_close)}</div><div class="d">90% between ${money(m.p5_close)} and ${money(m.p95_close)}</div></div>
+   <div class="tile"><div class="k">Ends the day green</div><div class="v">${(m.p_green*100).toFixed(0)}%</div><div class="d">of replays above the entry</div></div>
+   <div class="tile"><div class="k">Same rule, past ${h.sessions} days</div><div class="v">${h.target}/${h.triggered}</div><div class="d">hit target · ${h.stop} stopped · avg ${(+h.avg_R).toFixed(2)}R</div></div></div>
+  <div class="card"><h2>How the rest of the day could go</h2><p class="hint">Each band shows where the price was across the replays at that time. Hover to read the levels.</p><div class="chart" id="${id}-fan"></div></div>
+  <div class="grid g2"><div class="card"><h2>Where the price ends the day</h2><p class="hint">Green: beyond the target · red: beyond the stop</p><div class="chart" id="${id}-hist"></div></div>
+  <div class="card"><h2>Every past time the rule fired</h2><p class="hint">The same entry, stop and target rule on ${esc(p.symbol)}'s real past sessions</p><div class="tw" style="max-height:300px;overflow:auto"><table><thead><tr><th>Date</th><th>Time</th><th class="n">Entry</th><th>Outcome</th><th class="n">Result</th></tr></thead><tbody>${(h.trades||[]).slice().reverse().map(t=>`<tr><td>${esc(t.date)}</td><td class="muted">${esc(t.time)}</td><td class="n">${money(t.entry)}</td><td><span class="status ${t.outcome==="target"?"ok":t.outcome==="stop"?"no":"neutral"}">${t.outcome==="target"?"Target":t.outcome==="stop"?"Stop":"At close"}</span></td><td class="n ${cls(t.R)}">${t.R>0?"+":""}${(+t.R).toFixed(2)}R</td></tr>`).join("") || `<tr><td colspan="5" class="empty">The rule never fired.</td></tr>`}</tbody></table></div></div></div>
+  <p class="tiny muted">${esc(r.note||"")}</p>`;
+}
+function wireSim(r, id="tm"){ fanChart($(`#${id}-fan`), r); histChart($(`#${id}-hist`), r); }
+
+VIEWS.sim = el => {
+  const t = S.simTicker || S.state.tickers[0] || ""; S.simTicker=null;
+  el.innerHTML = `<div class="card"><h2>What if I buy…</h2><p class="hint">Pick a stock and a price. The stop and target come from simple rules; change them to see how the odds move. Uses the stock's own last 60 days of 5-minute bars.</p>
+   <div class="row"><label class="f">Ticker<input type="text" id="s-t" value="${esc(t)}" style="text-transform:uppercase;width:120px"></label>
+   <label class="f">Buy price ($)<input type="number" id="s-e" step="0.01" min="0" style="width:130px" placeholder="latest"></label>
+   <label class="f">Stop, % below<input type="number" id="s-sp" value="1" step="0.1" min="0.05" style="width:110px"></label>
+   <label class="f">Target<select id="s-r"><option value="1">1R (= the risk)</option><option value="1.5">1.5R</option><option value="2" selected>2R (twice the risk)</option><option value="3">3R</option></select></label>
+   <label class="f">Buy time (ET)<select id="s-time">${["9:45 AM","10:00 AM","10:15 AM","10:30 AM","11:00 AM","12:00 PM","1:00 PM","2:00 PM"].map(x=>`<option ${x==="10:15 AM"?"selected":""}>${x}</option>`).join("")}</select></label>
+   <button class="btn primary" id="s-go" data-busy="Replaying 10,000 days">Run the Time Machine</button></div>
+   <p class="tiny muted" id="s-hint" style="margin:8px 0 0"></p></div><div id="s-out">${S.cache.sim?"":""}</div>`;
+  const fill = async () => { const tk=$("#s-t").value.trim().toUpperCase(); if(!tk) return; try{ await loadQuotes([tk]); const x=q(tk); if(x){ $("#s-e").placeholder=x.price.toFixed(2); $("#s-hint").textContent=`${tk} last ${money(x.price)}. Leave the buy price empty to use it.`; } }catch(e){} };
+  $("#s-t").onchange = fill; fill();
+  $("#s-go").onclick = e => busy(e.currentTarget, async()=>{
+    const tk=$("#s-t").value.trim().toUpperCase(); let entry=$("#s-e").value;
+    const body = {ticker:tk, stop_pct:$("#s-sp").value, target_r:$("#s-r").value, entry_time:$("#s-time").value};
+    try { if(!entry){ await loadQuotes([tk]); entry=q(tk)?.price; }
+      const r = await api("simulate",{...body, entry});
+      S.cache.simR = r; if($("#s-out")){ $("#s-out").innerHTML = simResultHTML(r); wireSim(r); } }
+    catch(err){ if($("#s-out")) $("#s-out").innerHTML = errBox(err); }
+  }).catch(()=>{});
+  if(S.cache.simR){ $("#s-out").innerHTML = simResultHTML(S.cache.simR); wireSim(S.cache.simR); }
+};
+
+/* ------------------------------------------------------------------ BULL VS BEAR */
+VIEWS.debate = el => {
+  const t = S.debateTicker || ""; S.debateTicker=null;
+  const ok = S.state.checks.find(c=>c.key==="claude")?.ok;
+  el.innerHTML = `<div class="card"><h2>Pick a stock</h2><p class="hint">The skills collect the facts (price, chart setups, earnings from the SEC, news, and your Time Machine run if you made one). Claude then argues both sides from those facts only. About 1–2 minutes.</p>
+   ${ok?"":box("warn","Bull vs Bear needs Claude Code installed and signed in. See the README, step 4. Every other page works without it.")}
+   <div class="row"><label class="f">Ticker<input type="text" id="d-t" value="${esc(t)}" style="text-transform:uppercase;width:140px" placeholder="NVDA"></label><button class="btn primary" id="d-go" data-busy="Gathering facts & debating" ${ok?"":"disabled"}>Start the debate</button>
+   <div class="row" style="gap:6px">${[...new Set([...holdings().map(h=>h.t),...S.state.tickers])].slice(0,10).map(x=>`<button class="btn sm ghost" data-q="${esc(x)}">${esc(x)}</button>`).join("")}</div></div></div><div id="d-out">${S.cache.debate||""}</div>`;
+  const runIt = () => {
+    const tk = $("#d-t").value.trim().toUpperCase();
+    if(!tk){ $("#d-out").innerHTML = box("info","Type a ticker, or click one of the buttons."); return; }
+    $("#d-out").innerHTML = box("info",`Gathering facts on ${esc(tk)} and writing the debate. You can switch pages; the result will be waiting here.`);
+    busy($("#d-go"), async()=>{
+      try { const r = await api("debate",{ticker:tk}); S.cache.debate = debateHTML(tk, r); toast("Bull vs Bear ready for "+tk); }
+      catch(err){ S.cache.debate = errBox(err); }
+      const o = $("#d-out"); if(o) o.innerHTML = S.cache.debate;
+    }).catch(()=>{});
+  };
+  $("#d-go").onclick = runIt; $$("[data-q]",el).forEach(b=>b.onclick=()=>{ $("#d-t").value=b.dataset.q; runIt(); });
+  if(t && ok) runIt();
+};
+function debateHTML(t, d){
+  const lean = {bullish:["ok","Leans bullish"], bearish:["no","Leans bearish"], balanced:["neutral","Balanced"]}[d.lean] || ["neutral", d.lean||"—"];
+  const pts = a => (a||[]).map(p=>`<div class="pt"><div class="p">${esc(p.point)}</div><div class="e">${esc(p.evidence)}</div></div>`).join("") || `<div class="empty">—</div>`;
+  return `<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><h2>${esc(t)}: ${esc(d.headline)}</h2><p class="hint" style="margin:0">Built ${esc(d.generated_at)} from: ${esc((d.sources||[]).join(", ").replace(/_/g," "))}</p></div><div class="row"><span class="status ${lean[0]}">${lean[1]}</span><span class="pill">Confidence: ${esc(d.confidence||"—")}</span></div></div></div>
+   <div class="debate"><div class="card side-bull"><h2>▲ The bull case</h2><p class="hint">Why it could go up</p>${pts(d.bull)}</div><div class="card side-bear"><h2>▼ The bear case</h2><p class="hint">Why it could go down</p>${pts(d.bear)}</div></div>
+   <div class="card"><h2>Bottom line</h2><p style="margin:6px 0 12px">${esc(d.verdict)}</p>${(d.watch||[]).length?`<div class="small muted" style="margin-bottom:4px">What to watch next</div>${d.watch.map(w=>`<span class="chip">${esc(w)}</span>`).join("")}`:""}
+   ${(d.gaps||[]).length?box("info","Not included: "+d.gaps.map(esc).join("; ")):""}
+   <div class="row" style="margin-top:12px"><button class="btn sm" onclick="S.simTicker='${esc(t)}';go('sim')">Replay a trade on ${esc(t)}</button><button class="btn sm" onclick="S.earnTicker='${esc(t)}';go('earn')">See the earnings</button><button class="btn sm" onclick="S.newsTicker='${esc(t)}';go('news')">See the news</button></div></div>`;
+}
+
+/* ------------------------------------------------------------------ CONGRESS */
+VIEWS.congress = el => {
+  el.innerHTML = `<div class="card"><h2>Search disclosures</h2><p class="hint">Members of Congress must report stock trades within 45 days (STOCK Act). These are the House Clerk's Periodic Transaction Reports.</p>
+   <div class="row"><label class="f grow">Members (comma separated, empty = everyone)<input type="text" id="c-m" value="Pelosi"></label>
+   <label class="f">Filed since<input type="date" id="c-s" value="${new Date(Date.now()-90*864e5).toISOString().slice(0,10)}"></label>
+   <button class="btn primary" id="c-go" data-busy="Reading the House index">Show filings</button><button class="btn" id="c-new" data-busy="Checking">Only new since last check</button></div></div><div id="c-out">${S.cache.cong||""}</div>`;
+  const runIt = (btn, mode) => { const members=$("#c-m").value.split(","), since=$("#c-s").value; busy(btn, async()=>{
+    try { const r = await api("congress",{mode, members, since, limit:60}); S.cache.cong = congHTML(r, mode); } catch(err){ S.cache.cong = errBox(err); }
+    if($("#c-out")){ $("#c-out").innerHTML = S.cache.cong; wireCong(); }
+  }).catch(()=>{}); };
+  $("#c-go").onclick = e => runIt(e.currentTarget,"index"); $("#c-new").onclick = e => runIt(e.currentTarget,"new");
+  wireCong();
+};
+function congHTML(r, mode){
+  const list = Array.isArray(r) ? r : (r.new || r.filings || r.items || []);
+  const pdf = S.state.checks.find(c=>c.key==="pdftotext")?.ok;
+  return `<div class="card"><h2>${mode==="new"?"New filings":"Filings"} <span class="muted small">· ${list.length}</span></h2>${pdf?"":`<p class="hint">To read each filing into rows (stock, buy/sell, amount), install the free PDF reader in Settings. You can always open the PDF.</p>`}
+   ${!list.length?`<div class="empty">No filings found.</div>`:`<div class="tw"><table><thead><tr><th>Filed</th><th>Member</th><th>District</th><th>Report</th><th></th></tr></thead><tbody>${list.map(f=>`<tr><td>${esc(f.filed)}</td><td><b>${esc(f.name||f.first+" "+f.last)}</b></td><td class="muted">${esc(f.district)}</td><td><a href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">PDF #${esc(f.doc_id)}</a></td><td class="n">${pdf?`<button class="btn sm" data-read="${esc(f.doc_id)}" data-busy="Reading">Read trades</button>`:""}</td></tr><tr class="rd" id="rd-${esc(f.doc_id)}" style="display:none"><td colspan="5"></td></tr>`).join("")}</tbody></table></div>`}</div>`;
+}
+function wireCong(){
+  $$("[data-read]").forEach(b=>b.onclick=()=>busy(b, async()=>{
+    const row=$("#rd-"+b.dataset.read); row.style.display="";
+    try { const r = await api("congress_read",{doc_id:b.dataset.read}); const rows = r.rows || r.transactions || (Array.isArray(r)?r:[]);
+      row.firstElementChild.innerHTML = !rows.length ? `<div class="muted small">No stock rows found in this filing.</div>` : `<table><thead><tr><th>Owner</th><th>Asset</th><th>Ticker</th><th>Type</th><th>Trade date</th><th>Amount</th><th>Days to disclose</th></tr></thead><tbody>${rows.map(x=>`<tr${x.you_hold||x.held?' style="background:var(--warn-soft)"':""}><td>${esc(x.owner)}</td><td class="small">${esc(x.asset)}${x.option?`<div class="tiny muted">${esc([x.option.type||x.option.kind,x.option.strike&&"strike "+x.option.strike,x.option.expiry&&"exp "+x.option.expiry].filter(Boolean).join(" · "))}</div>`:""}</td><td class="sym">${esc(x.ticker||"")}</td><td><span class="status ${/purchase|buy/i.test(x.type||x.side)?"ok":/sale|sell/i.test(x.type||x.side)?"no":"neutral"}">${esc(x.type||x.side)}</span></td><td>${esc(x.date||x.trade_date)}</td><td class="small">${esc(x.amount||x.amount_range)}</td><td class="n">${esc(x.days_to_disclose??x.lag_days??"")}</td></tr>`).join("")}</tbody></table>`; }
+    catch(err){ row.firstElementChild.innerHTML = errBox(err); }
+  }).catch(()=>{}));
+}
+
+/* ------------------------------------------------------------------ PLAN A TRADE (entry → exit → time machine → budget → risk → broker) */
+const STEPS = ["Entry signal","Stop & target","Replay","Size","Risk check","Approve"];
+VIEWS.trade = el => {
+  const T = S.trade; if(!T.ticker) T.ticker = S.state.tickers[0]||"";
+  el.innerHTML = `<div class="steps">${STEPS.map((s,i)=>`<div class="step ${T.step===i+1?"on":""} ${T.done?.[i+1]?"done":""}" data-s="${i+1}"><b>${T.done?.[i+1]?"✓":i+1}</b>${s}</div>`).join("")}</div><div id="t-body"></div>`;
+  $$(".step",el).forEach(s=>s.onclick=()=>{ T.step=+s.dataset.s; VIEWS.trade(el); });
+  ({1:tradeEntry,2:tradeExit,3:tradeReplay,4:tradeSize,5:tradeRisk,6:tradeApprove})[T.step]($("#t-body"));
+};
+const markDone = n => { S.trade.done = S.trade.done||{}; S.trade.done[n]=true; };
+const nextBtn = (n, label) => `<button class="btn primary" onclick="S.trade.step=${n};VIEWS.trade($('#page'))">${label} →</button>`;
+
+function tradeEntry(el){
+  const T=S.trade;
+  el.innerHTML = `<div class="card"><h2>1 · Is it time to buy?</h2><p class="hint">Entry Timer watches 5-minute bars. <b>Opening-range breakout:</b> buy when a bar closes above the high of the first 15 minutes. <b>Price level:</b> buy when a bar closes above a level you pick. Long trades only.</p>
+   <div class="row"><label class="f">Ticker<input type="text" id="t1-t" value="${esc(T.ticker)}" style="text-transform:uppercase;width:120px"></label>
+   <label class="f">Setup<select id="t1-s"><option value="orb">Opening-range breakout</option><option value="level" ${T.level?"selected":""}>Close above a price</option></select></label>
+   <label class="f" id="t1-lw">Level ($)<input type="number" id="t1-l" step="0.01" value="${esc(T.level||"")}" style="width:120px"></label>
+   <label class="f" id="t1-ow">Range (minutes)<select id="t1-o"><option>5</option><option selected>15</option><option>30</option></select></label>
+   <button class="btn primary" id="t1-go" data-busy="Checking bars">Check now</button><label class="toggle small"><input type="checkbox" id="t1-auto"> Re-check every minute</label></div></div>
+   <div id="t1-out"></div>
+   <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><div><b>Already know your entry price?</b><div class="small muted">Skip the signal and set the stop and target yourself.</div></div>${nextBtn(2,"Skip to stop & target")}</div></div>`;
+  const sw = () => { const lv=$("#t1-s").value==="level"; $("#t1-lw").style.display=lv?"":"none"; $("#t1-ow").style.display=lv?"none":""; }; $("#t1-s").onchange=sw; sw();
+  const check = async () => {
+    T.ticker = $("#t1-t").value.trim().toUpperCase();
+    try { const r = await api("entry",{ticker:T.ticker, setup:$("#t1-s").value, level:$("#t1-l").value, or_minutes:$("#t1-o").value}); T.entry=r; if($("#t1-out")) $("#t1-out").innerHTML=entryHTML(r); if(r.status==="triggered"){ markDone(1); if($("#t1-auto")) $("#t1-auto").checked=false; toast(T.ticker+" triggered!"); } }
+    catch(err){ if($("#t1-out")) $("#t1-out").innerHTML = errBox(err); }
+  };
+  $("#t1-go").onclick = e => busy(e.currentTarget, check).catch(()=>{});
+  clearInterval(S.entryTimer);
+  $("#t1-auto").onchange = e => { clearInterval(S.entryTimer); if(e.target.checked){ check(); S.entryTimer=setInterval(()=>{ if(S.page!=="trade"||S.trade.step!==1||!$("#t1-auto")?.checked){ clearInterval(S.entryTimer); return;} check(); },60000); } };
+  if(T.entry && T.entry.symbol===T.ticker) $("#t1-out").innerHTML = entryHTML(T.entry);
+}
+function entryHTML(r){
+  const st = {triggered:["ok","Triggered: buy signal"], waiting:["wait","Waiting"], expired:["no","Expired"]}[r.status]||["neutral",r.status];
+  const orr = r.opening_range;
+  return `<div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>${esc(r.symbol)}</h2><span class="status ${st[0]}">${st[1]}</span></div>
+   <p style="margin:8px 0">${esc(r.reason||"")}</p>
+   <dl class="kv">${orr?`<dt>Opening range</dt><dd>${money(orr.low)} – ${money(orr.high)}</dd>`:""}${r.level?`<dt>Level</dt><dd>${money(r.level)}</dd>`:""}${r.trigger?`<dt>Triggered at</dt><dd>${esc(r.trigger.time||"")} · ${money(r.trigger.price??r.trigger.close)}</dd>`:""}${r.last?`<dt>Last bar</dt><dd>${esc(r.last.time||"")} · close ${money(r.last.close)}</dd>`:""}<dt>Entries allowed</dt><dd>${esc(r.no_entries_before)} – ${esc(r.no_entries_after)} ET</dd><dt>As of</dt><dd>${esc(r.now)} ET</dd></dl>
+   ${r.status==="triggered"?`<div class="row" style="margin-top:12px">${nextBtn(2,"Set stop & target")}</div>`:""}</div>`;
+}
+
+function tradeExit(el){
+  const T=S.trade; const trig = T.entry && T.entry.status==="triggered" && T.entry.symbol===T.ticker;
+  el.innerHTML = `<div class="card"><h2>2 · Where do I get out?</h2><p class="hint">Exit Planner sets the stop (where you admit you're wrong) and the target (where you take profit) <b>before</b> you buy. "R" is your risk per share: a 2R target makes twice what the stop would lose.</p>
+   ${trig?box("ok",`Using the ${esc(T.ticker)} buy signal at ${money(T.entry.trigger?.price??T.entry.trigger?.close)}.`):""}
+   <div class="row"><label class="f">Ticker<input type="text" id="t2-t" value="${esc(T.ticker)}" style="text-transform:uppercase;width:120px" ${trig?"disabled":""}></label>
+   ${trig?"":`<label class="f">Buy price ($)<input type="number" id="t2-e" step="0.01" style="width:130px" placeholder="latest"></label>`}
+   <label class="f">Stop rule<select id="t2-sr">${trig&&T.entry.opening_range?`<option value="or-mid">Middle of opening range</option><option value="or-low">Low of opening range</option>`:""}<option value="pct">% below the buy price</option><option value="price">A price I pick</option><option value="atr">ATR multiple (volatility)</option></select></label>
+   <label class="f" id="t2-svw">Value<input type="number" id="t2-sv" value="1" step="0.1" style="width:110px"></label>
+   <label class="f">Target<select id="t2-tg"><option value="1R">1R</option><option value="1.5R">1.5R</option><option value="2R" selected>2R</option><option value="3R">3R</option><option value="price">A price I pick</option></select></label>
+   <label class="f" id="t2-tvw" style="display:none">Target ($)<input type="number" id="t2-tv" step="0.01" style="width:120px"></label>
+   <button class="btn primary" id="t2-go" data-busy="Planning">Make the plan</button></div></div><div id="t2-out"></div>`;
+  const sw=()=>{ const v=$("#t2-sr").value; $("#t2-svw").style.display = v.startsWith("or-")?"none":""; $("#t2-sv").value = v==="pct"?1:v==="atr"?1.5:""; $("#t2-tvw").style.display=$("#t2-tg").value==="price"?"":"none"; };
+  $("#t2-sr").onchange=sw; $("#t2-tg").onchange=sw; sw();
+  if(!trig){ const fill=async()=>{ const t=$("#t2-t").value.trim().toUpperCase(); if(!t) return; try{ await loadQuotes([t]); if(q(t)) $("#t2-e").placeholder=q(t).price.toFixed(2);}catch(e){} }; $("#t2-t").onchange=fill; fill(); }
+  $("#t2-go").onclick = e => busy(e.currentTarget, async()=>{
+    T.ticker = trig ? T.ticker : $("#t2-t").value.trim().toUpperCase();
+    let entry = trig ? null : ($("#t2-e").value || (await loadQuotes([T.ticker]), q(T.ticker)?.price));
+    try { const r = await api("plan",{ticker:T.ticker, use_signal:trig, entry, stop_rule:$("#t2-sr").value, stop_value:$("#t2-sv").value, target:$("#t2-tg").value, target_value:$("#t2-tv").value});
+      T.plan=r; markDone(2); if($("#t2-out")) $("#t2-out").innerHTML = planHTML(r) + `<div class="row">${nextBtn(3,"Replay it 10,000 times")}${nextBtn(4,"Skip to sizing")}</div>`; }
+    catch(err){ if($("#t2-out")) $("#t2-out").innerHTML = errBox(err); }
+  }).catch(()=>{});
+  if(T.plan && T.plan.symbol===T.ticker) $("#t2-out").innerHTML = planHTML(T.plan) + `<div class="row">${nextBtn(3,"Replay it 10,000 times")}</div>`;
+}
+function planHTML(p){
+  return `<div class="card"><h2>The plan for ${esc(p.symbol)}</h2>${(p.warnings||[]).length?box("warn",p.warnings.map(esc).join("<br>")):""}
+   <div class="tiles" style="margin:10px 0"><div class="tile"><div class="k">Buy at</div><div class="v">${money(p.entry)}</div><div class="d">${esc(p.entry_time||"")}</div></div>
+   <div class="tile"><div class="k">Stop (get out if wrong)</div><div class="v down">${money(p.stop)}</div><div class="d">${esc(p.stop_label)}</div></div>
+   <div class="tile"><div class="k">Target (take profit)</div><div class="v up">${money(p.target)}</div><div class="d">${esc(p.target_label)}</div></div>
+   <div class="tile"><div class="k">Risk a share</div><div class="v">${money(p.risk_per_share)}</div><div class="d">reward:risk ${(+p.reward_risk).toFixed(2)} · out by ${esc(p.flat_by)}</div></div></div>
+   <p class="tiny muted" style="margin:0">${esc(p.stop_detail||"")} · ${esc(p.note||"")}</p></div>`;
+}
+function tradeReplay(el){
+  el.innerHTML = `<div class="card"><h2>3 · What are the odds?</h2><p class="hint">Time Machine replays the rest of the day 10,000 times from this stock's own last 60 days, and re-runs the same rule on every past session.</p><button class="btn primary" id="t3-go" data-busy="Replaying 10,000 days">Run the Time Machine on my plan</button></div><div id="t3-out"></div>`;
+  const show = r => { if(!$("#t3-out")) return; $("#t3-out").innerHTML = simResultHTML(r,"t3") + `<div class="row">${nextBtn(4,"Size the trade")}</div>`; wireSim(r,"t3"); };
+  $("#t3-go").onclick = e => busy(e.currentTarget, async()=>{ try{ const r=await api("simulate",{use_plan:true}); S.trade.sim=r; markDone(3); show(r);}catch(err){ if($("#t3-out")) $("#t3-out").innerHTML=errBox(err);} }).catch(()=>{});
+  if(S.trade.sim) show(S.trade.sim);
+}
+function tradeSize(el){
+  const c=S.state.config;
+  el.innerHTML = `<div class="card"><h2>4 · How many shares?</h2><p class="hint">Budget Manager finds the whole number of shares that fits all your limits: max loss a trade (${money(c.max_loss_per_trade_usd,0)}), position cap (${c.max_position_pct}% of ${money(c.budget,0)}), max order (${money(c.max_order_usd,0)}), and cash after a ${c.cash_buffer_pct}% buffer. <a href="#" onclick="go('settings');return false">Change limits</a></p>
+   <div class="row"><label class="toggle"><input type="checkbox" id="t4-l"> Limit order at the plan's price (instead of market)</label><button class="btn primary" id="t4-go" data-busy="Sizing">Size it</button></div></div><div id="t4-out"></div>`;
+  const show = r => { if(!$("#t4-out")) return; const s=r.sizing||r; const o=(r.orders||[])[0]||{}; const qty=+(s.qty??o.qty??0);
+    $("#t4-out").innerHTML = s.refusal ? box("err","<b>Refused:</b> "+esc(s.refusal)) :
+    `<div class="card"><h2>${esc(s.symbol)}: ${qty} shares <span class="status wait" style="vertical-align:3px">limited by ${esc(s.bound_by||"")}</span></h2><p class="hint">${esc(o.why||"")}</p>${(r.notes||[]).map(n=>box("info",esc(n))).join("")}
+     <div class="tw"><table><thead><tr><th>Limit</th><th>How</th><th class="n">Shares allowed</th><th></th></tr></thead><tbody>${(s.limits||[]).map(l=>`<tr><td><b>${esc(l.name)}</b></td><td class="small">${esc(l.how)}</td><td class="n">${l.shares}</td><td>${l.binds?'<span class="status wait">decides it</span>':""}</td></tr>`).join("")}</tbody></table></div>
+     <div class="tiles" style="margin-top:12px"><div class="tile"><div class="k">Order value</div><div class="v">${money(s.cost??qty*s.entry)}</div><div class="d">${esc(s.order_type||"market")} order</div></div><div class="tile"><div class="k">Max loss at the stop</div><div class="v down">${money(s.max_loss??qty*s.risk_per_share)}</div><div class="d">your limit ${money(s.max_loss_per_trade_usd,0)}</div></div><div class="tile"><div class="k">Gain at the target</div><div class="v up">${money(qty*(s.target-s.entry))}</div><div class="d">out by ${esc(s.flat_by||"")} ET</div></div></div>
+     ${(r.warnings||s.warnings||[]).length?box("warn",(r.warnings||s.warnings).map(esc).join("<br>")):""}<div class="row">${nextBtn(5,"Check it against my rules")}</div></div>`; };
+  $("#t4-go").onclick = e => busy(e.currentTarget, async()=>{ try{ const r=await api("size",{limit:$("#t4-l").checked}); S.trade.size=r; markDone(4); show(r);}catch(err){ if($("#t4-out")) $("#t4-out").innerHTML=errBox(err);} }).catch(()=>{});
+  if(S.trade.size) show(S.trade.size);
+}
+function tradeRisk(el){
+  el.innerHTML = `<div class="card"><h2>5 · Does it break my rules?</h2><p class="hint">Risk Manager checks the order against every limit: stop required, max loss, reward:risk, daily loss, trades per day, entry window, market hours, blocked tickers, cash and more. Only a PASS can go to the broker.</p><button class="btn primary" id="t5-go" data-busy="Checking">Run the risk check</button></div><div id="t5-out"></div>`;
+  const show = r => { if(!$("#t5-out")) return; $("#t5-out").innerHTML = (r.results||[]).map(x=>`<div class="card" style="border-left:4px solid ${x.verdict==="PASS"?"var(--good)":"var(--bad)"}"><div class="row" style="justify-content:space-between;align-items:center"><h2>${esc(x.side?.toUpperCase())} ${esc(x.amount)} ${esc(x.symbol)}</h2><span class="status ${x.verdict==="PASS"?"ok":"no"}">${x.verdict==="PASS"?"✓ PASS":"✕ BLOCKED"}</span></div>
+     ${(x.reasons||[]).length?`<div style="margin-top:8px">${x.reasons.map(t=>`<div class="msg err small">${esc(t)}</div>`).join("")}</div>`:""}${(x.warnings||[]).map(t=>`<div class="msg warn small">${esc(t)}</div>`).join("")}
+     <ul class="small" style="color:var(--text-2);margin:8px 0 0;padding-left:18px">${(x.info||[]).map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`).join("") + ((r.results||[]).some(x=>x.verdict==="PASS")?`<div class="row">${nextBtn(6,"Review & approve")}</div>`:box("info","Fix what's blocked (or wait for market hours), then check again.")); };
+  $("#t5-go").onclick = e => busy(e.currentTarget, async()=>{ try{ const r=await api("risk"); S.trade.risk=r; if((r.results||[]).some(x=>x.verdict==="PASS")) markDone(5); show(r);}catch(err){ if($("#t5-out")) $("#t5-out").innerHTML=errBox(err);} }).catch(()=>{});
+  if(S.trade.risk) show(S.trade.risk);
+}
+async function tradeApprove(el){
+  el.innerHTML = `<div class="card"><h2>6 · Approve and send</h2><p class="hint">Order Executor shows each order as a plain ticket. Nothing is sent unless you type <b>yes</b> for that one order. ${S.state.has_alpaca?"Approved orders can go straight to your Alpaca <b>paper</b> account.":"Connect Alpaca in Settings to send paper orders from here; otherwise place it in your broker and record the fill below."}</p><div id="t6-out"><div class="empty"><span class="spin"></span></div></div></div>
+   <div class="card"><h2>Record a fill / close a position</h2><p class="hint">Keep your portfolio right: record what actually filled, or make the sell ticket that closes a day trade before ${esc(S.state.config.flat_by)}.</p>
+   <div class="row"><label class="f">Ticker<input type="text" id="f-t" value="${esc(S.trade.ticker||"")}" style="text-transform:uppercase;width:110px"></label><label class="f">Side<select id="f-s"><option value="buy">Bought</option><option value="sell">Sold</option></select></label><label class="f">Shares<input type="number" id="f-q" style="width:100px"></label><label class="f">Price ($)<input type="number" id="f-p" step="0.01" style="width:110px"></label><button class="btn" id="f-go" data-busy="Saving">Record fill</button><button class="btn danger" id="f-flat" data-busy="Building">Make a sell-to-close ticket</button></div><div id="f-out"></div></div>`;
+  $("#f-go").onclick = e => busy(e.currentTarget, async()=>{ const r=await api("fill",{symbol:$("#f-t").value, side:$("#f-s").value, qty:$("#f-q").value, price:$("#f-p").value}); S.state.portfolio=r.portfolio; $("#f-out").innerHTML=box("ok",esc(r.message)); }).catch(()=>{});
+  $("#f-flat").onclick = e => busy(e.currentTarget, async()=>{ const r=await api("flatten",{symbol:$("#f-t").value, qty:$("#f-q").value}); $("#f-out").innerHTML=box("info",esc(r.message).replace(/\n/g,"<br>")+"<br>Run the risk check (step 5) on it, then approve it here."); loadTickets(); }).catch(()=>{});
+  loadTickets();
+}
+async function loadTickets(){
+  const o=$("#t6-out"); if(!o) return;
+  try { const T = await api("tickets");
+    o.innerHTML = !T.length ? `<div class="empty">No orders yet. Size a trade first (step 4).</div>` : T.map(t=>`<div class="ticket"><div class="row" style="justify-content:space-between;align-items:center"><b>Order ${t.index}</b><span class="status ${t.ready?"ok":"no"}">${esc(t.ready?"Ready for your yes":t.status)}</span></div>
+     <p style="margin:8px 0;font-size:15px">${esc(t.plain)}</p><div class="small muted">${t.paper?"Paper (practice) account":"⚠ LIVE account"} · ${esc(t.broker)}${t.max_loss!=null?" · max loss "+money(t.max_loss):""}</div>
+     <details style="margin-top:6px"><summary>Exact order details</summary><pre class="mono" style="white-space:pre-wrap;background:var(--surface-2);padding:10px;border-radius:8px">${esc(JSON.stringify(t.tool_input,null,2))}</pre></details>
+     ${t.ready?`<div class="row" style="margin-top:10px"><label class="f grow">Type <b>yes</b> to approve this one order<input type="text" id="y-${t.index}" placeholder="yes"></label><button class="btn primary" data-ap="${t.index}" data-busy="Recording">Approve</button><button class="btn" data-dc="${t.index}">Decline</button></div><div id="ap-${t.index}"></div>`:""}</div>`).join("");
+    $$("[data-ap]",o).forEach(b=>b.onclick=()=>busy(b, async()=>{ const i=b.dataset.ap; const r=await api("approve",{index:i, reply:$("#y-"+i).value});
+      $("#ap-"+i).innerHTML = r.ok ? box("ok","Your yes is recorded.") + (S.state.has_alpaca && S.state.config.paper!==false ? `<button class="btn primary" data-pl="${i}" data-busy="Sending to Alpaca paper">Send to Alpaca paper account</button>` : box("info","Now place exactly this order in your broker (or ask Claude Desktop with the Alpaca connector), then record the fill below.")) : box("err",esc(r.message));
+      $$("[data-pl]",o).forEach(x=>x.onclick=()=>busy(x, async()=>{ const p=await api("place",{index:x.dataset.pl}); $("#ap-"+i).innerHTML=box("ok",`Sent. Alpaca order ${esc(p.placed.id)} · ${esc(p.placed.status)}`); markDone(6); toast("Order sent to paper account"); }).catch(()=>{})); }).catch(()=>{}));
+    $$("[data-dc]",o).forEach(b=>b.onclick=async()=>{ await api("approve",{index:b.dataset.dc, reply:"no", decline:true}); toast("Declined"); loadTickets(); });
+  } catch(err){ o.innerHTML = errBox(err); }
+}
+
+/* ------------------------------------------------------------------ ALERTS */
+VIEWS.alerts = el => {
+  el.innerHTML = `<div class="card"><h2>Add an alert</h2><p class="hint">Each alert rings once. The dashboard checks every minute while this page is open${"Notification" in window?" and can show a desktop notification":""}.</p>
+   <div class="row"><label class="f">Type<select id="a-k"><option value="above">Price goes above</option><option value="below">Price goes below</option><option value="pct">Moves % from yesterday</option><option value="stop">Stop level</option><option value="target">Target level</option><option value="time">At a time (ET)</option><option value="opening_bell">NYSE opening bell</option><option value="from_plan">From my trade plan (stop, target, flat by close)</option></select></label>
+   <label class="f" id="a-sw">Ticker<input type="text" id="a-s" style="text-transform:uppercase;width:110px" value="${esc(S.state.tickers[0]||"")}"></label>
+   <label class="f" id="a-vw">Value<input type="number" id="a-v" step="0.01" style="width:120px"></label>
+   <label class="f" id="a-tw" style="display:none">Time<input type="time" id="a-at" value="15:55"></label>
+   <label class="f grow" id="a-lw" style="display:none">Label<input type="text" id="a-lb" value="flat by close"></label>
+   <button class="btn primary" id="a-go">Add alert</button></div><div id="a-err"></div></div>
+   <div class="card"><div class="row" style="justify-content:space-between;align-items:center"><h2>My alerts</h2><div class="row"><button class="btn sm" id="a-notif" style="${"Notification" in window && Notification.permission!=="granted"?"":"display:none"}">Turn on desktop notifications</button><button class="btn sm" id="a-chk" data-busy="Checking">Check now</button></div></div><div id="a-ring"></div><div id="a-list"></div></div>`;
+  const sw=()=>{ const k=$("#a-k").value; $("#a-sw").style.display=["above","below","pct","stop","target"].includes(k)?"":"none"; $("#a-vw").style.display=$("#a-sw").style.display; $("#a-tw").style.display=k==="time"?"":"none"; $("#a-lw").style.display=k==="time"?"":"none"; };
+  $("#a-k").onchange=sw; sw();
+  $("#a-go").onclick = async()=>{ try{ const r=await api("alert_add",{kind:$("#a-k").value, symbol:$("#a-s").value, value:$("#a-v").value, at:$("#a-at").value, label:$("#a-lb").value}); $("#a-err").innerHTML=""; toast("Alert added"); drawAlerts(r);}catch(e){ $("#a-err").innerHTML=errBox(e);} };
+  $("#a-chk").onclick = e => busy(e.currentTarget, checkAlerts).catch(()=>{});
+  $("#a-notif").onclick = () => Notification.requestPermission().then(()=>VIEWS.alerts(el));
+  api("alerts").then(drawAlerts).catch(e=>$("#a-list").innerHTML=errBox(e));
+};
+const ALERT_TXT = r => ({above:`${r.symbol} above ${money(r.price)}`, below:`${r.symbol} below ${money(r.price)}`, stop:`${r.symbol} stop ${money(r.price)}`, target:`${r.symbol} target ${money(r.price)}`, pct_move:`${r.symbol} moves ${r.pct}%`, time:`${r.at} ET: ${r.label||"reminder"}`, opening_bell:"NYSE opening bell"})[r.type] || JSON.stringify(r);
+function drawAlerts(r){
+  const L=$("#a-list"); if(!L) return; const rang = (r.state?.rang)||{};
+  L.innerHTML = !(r.rules||[]).length ? `<div class="empty">No alerts yet.</div>` : `<table><thead><tr><th>Alert</th><th>Day</th><th>Status</th><th></th></tr></thead><tbody>${r.rules.map(x=>{ const hit = rang[x.id] || Object.keys(rang).some(k=>k.startsWith(x.id)); return `<tr><td><b>${esc(ALERT_TXT(x))}</b>${x.note?`<div class="tiny muted">${esc(x.note)}</div>`:""}</td><td class="muted small">${esc(x.date||"every day")}</td><td>${hit?'<span class="status wait">Rang</span>':'<span class="status ok">Watching</span>'}</td><td class="n">${hit?`<button class="btn sm ghost" data-rs="${esc(x.id)}">Re-arm</button>`:""}<button class="btn sm ghost danger" data-del="${esc(x.id)}">Delete</button></td></tr>`; }).join("")}</tbody></table>`;
+  $$("[data-del]",L).forEach(b=>b.onclick=async()=>drawAlerts(await api("alert_remove",{id:b.dataset.del})));
+  $$("[data-rs]",L).forEach(b=>b.onclick=async()=>drawAlerts(await api("alert_reset",{id:b.dataset.rs})));
+}
+async function checkAlerts(){
+  const r = await api("alert_check"); const rings=r.rings||[];
+  if(rings.length){ S.rings=(S.rings||0)+rings.length; renderNav();
+    rings.forEach(x=>{ toast("🔔 "+x.message); try{ if("Notification" in window && Notification.permission==="granted") new Notification("Trader alert", {body:x.message}); }catch(e){} }); }
+  if($("#a-ring")) $("#a-ring").innerHTML = rings.length ? rings.map(x=>box("warn","🔔 "+esc(x.message))).join("") : `<div class="small muted" style="margin-bottom:8px">Checked ${new Date().toLocaleTimeString()}: nothing hit.</div>`;
+  if(S.page==="alerts") api("alerts").then(drawAlerts);
+}
+
+/* ------------------------------------------------------------------ SETTINGS */
+VIEWS.settings = el => {
+  const c=S.state.config; const ua=(c.sec_user_agent||""); const m=ua.match(/^(.*)\s(\S+@\S+)$/); const secName = m&&!/example\.com/.test(ua)?m[1]:"", secEmail = m&&!/example\.com/.test(ua)?m[2]:"";
+  const num = (k,l,h,step=1) => `<label class="f">${l}<input type="number" data-k="${k}" value="${esc(c[k])}" step="${step}" min="0">${h?`<span class="tiny muted">${h}</span>`:""}</label>`;
+  const tim = (k,l) => `<label class="f">${l}<input type="time" data-k="${k}" value="${esc(c[k])}"></label>`;
+  const tog = (k,l,h) => `<label class="toggle" style="align-items:flex-start"><input type="checkbox" data-k="${k}" ${c[k]?"checked":""}><span>${l}${h?`<div class="tiny muted">${h}</div>`:""}</span></label>`;
+  el.innerHTML = `<div class="card"><h2>Setup checklist</h2><p class="hint">Everything the 11 skills need. Green means done.</p>${S.state.checks.map(k=>`<div class="check"><div class="ic ${k.ok?"ok":k.level==="optional"||k.level==="info"?"opt":"no"}">${k.ok?"✓":k.level==="optional"?"–":"!"}</div><div style="flex:1"><div class="t">${esc(k.title)}<span class="lvl">${esc(k.level)}</span></div><div class="d">${esc(k.detail)}</div></div>${!k.ok&&k.fix==="install_poppler"?`<button class="btn sm" id="inst" data-busy="Installing">Install</button>`:!k.ok&&k.fix==="portfolio"?`<button class="btn sm" onclick="editPortfolio()">Add</button>`:!k.ok&&k.fix==="watchlist"?`<button class="btn sm" onclick="go('watch')">Add</button>`:""}</div>`).join("")}</div>
+
+  <div class="card"><h2>Who is asking (for the SEC)</h2><p class="hint">The SEC requires every program that downloads filings to include a name and email. It's sent only to sec.gov, as the "User-Agent" of each request.</p>
+   <div class="row"><label class="f grow">Your name<input type="text" id="sec-n" value="${esc(secName)}" placeholder="Jane Smith"></label><label class="f grow">Email<input type="email" id="sec-e" value="${esc(secEmail)}" placeholder="jane@company.com"></label><button class="btn primary" id="sec-save">Save</button></div></div>
+
+  <div class="card"><h2>My money and limits</h2><p class="hint">Budget Manager and Risk Manager follow these on every trade. Saved to <span class="mono">trader/config.json</span>.</p>
+   <div class="grid g4">${num("budget","Trading budget ($)","Money set aside for trading",100)}${num("max_loss_per_trade_usd","Max loss per trade ($)","If the stop hits",5)}${num("max_daily_loss_usd","Max loss per day ($)","All trades combined",10)}${num("max_trades_per_day","Max trades per day","")}
+   ${num("max_position_pct","Max in one stock (%)","Of the budget")}${num("max_order_usd","Max order size ($)","",100)}${num("cash_buffer_pct","Cash to keep aside (%)","Never spent")}${num("min_reward_risk","Min reward:risk","1 = win as much as you risk",0.1)}</div>
+   <hr class="sep"><div class="grid g4">${tim("no_entries_before","No buys before (ET)")}${tim("no_entries_after","No buys after (ET)")}${tim("flat_by","Sell everything by (ET)")}${num("max_orders_per_day","Max orders per day","")}</div>
+   <hr class="sep"><div class="grid g3">${tog("paper","Paper trading (practice money)","Strongly recommended. The dashboard only sends paper orders.")}${tog("require_stop","Every trade needs a stop","")}${tog("fractional","Allow fractional shares","")}${tog("allow_margin","Allow margin (borrowed money)","")}${tog("allow_short","Allow short selling","")}${tog("allow_options","Allow options","")}${tog("pdt_guard","Pattern-day-trader guard","For accounts under $25,000")}</div>
+   <hr class="sep"><div class="row"><label class="f grow">Never trade these tickers (comma separated)<input type="text" data-k="blocked" value="${esc((c.blocked||[]).join(", "))}" style="text-transform:uppercase"></label><label class="f">Broker<select data-k="broker"><option value="alpaca" ${c.broker==="alpaca"?"selected":""}>Alpaca</option><option value="ibkr" ${c.broker==="ibkr"?"selected":""}>Interactive Brokers</option></select></label></div>
+   <div id="cfg-msg"></div><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn primary" id="cfg-save" data-busy="Saving">Save my limits</button></div></div>
+
+  <div class="card"><h2>Alpaca (optional)</h2><p class="hint">Connect a free Alpaca account to sync your positions and send approved <b>paper</b> orders from the dashboard. Get keys at alpaca.markets → Paper Trading → API Keys. Saved only on this computer (<span class="mono">trader/secrets.json</span>).</p>
+   ${S.state.has_alpaca?box("ok","Connected. Keys are saved.")+`<div class="row"><button class="btn" id="al-sync" data-busy="Syncing">Sync my positions now</button><button class="btn danger" id="al-clear">Disconnect</button></div>`:
+   `<div class="row"><label class="f grow">API Key ID<input type="text" id="al-k" autocomplete="off"></label><label class="f grow">Secret Key<input type="password" id="al-s" autocomplete="off"></label><button class="btn primary" id="al-save">Connect</button></div>`}<div id="al-msg"></div></div>
+
+  <div class="card"><h2>Where your files are</h2><dl class="kv small"><dt>Your data</dt><dd class="mono">${esc(S.state.data_dir)}</dd><dt>The 11 skills (bundled)</dt><dd class="mono">${esc(S.state.skills_dir)}</dd></dl>
+   <p class="tiny muted">config.json (limits) · portfolio.json (holdings) · my_tickers.txt (watchlist) · plan.json, orders.json (current trade) · state/ (alerts, risk verdicts, approvals). The skills read and write these. To move to another computer, copy the whole TraderDashboard folder: your data comes with it. Keep secrets.json private.</p></div>`;
+  $("#sec-save").onclick = async()=>{ try{ const r=await api("config",{fields:{sec_name:$("#sec-n").value, sec_email:$("#sec-e").value}}); S.state.config=r.config; S.state.checks=r.checks; toast("Saved"); renderNav(); VIEWS.settings(el);}catch(e){toast(e.message,true);} };
+  $("#cfg-save").onclick = e => busy(e.currentTarget, async()=>{ const f={}; $$("[data-k]",el).forEach(i=>{ f[i.dataset.k] = i.type==="checkbox"?i.checked : i.dataset.k==="blocked"? i.value.toUpperCase().split(/[\s,]+/).filter(Boolean) : i.value; });
+    try{ const r=await api("config",{fields:f}); S.state.config=r.config; S.state.checks=r.checks; $("#cfg-msg").innerHTML=box("ok","Saved. Every skill uses these limits from now on."); renderNav(); }catch(err){ $("#cfg-msg").innerHTML=errBox(err); } }).catch(()=>{});
+  if($("#al-save")) $("#al-save").onclick = async()=>{ try{ const r=await api("secrets",{alpaca_key_id:$("#al-k").value, alpaca_secret:$("#al-s").value}); S.state.has_alpaca=r.has_alpaca; S.state.checks=r.checks; toast("Alpaca connected"); VIEWS.settings(el);}catch(e){ $("#al-msg").innerHTML=errBox(e);} };
+  if($("#al-clear")) $("#al-clear").onclick = async()=>{ const r=await api("secrets",{clear:true}); S.state.has_alpaca=false; S.state.checks=r.checks; VIEWS.settings(el); };
+  if($("#al-sync")) $("#al-sync").onclick = e => busy(e.currentTarget, async()=>{ try{ const r=await api("alpaca_sync"); S.state.portfolio=r.portfolio; S.state.checks=r.checks; $("#al-msg").innerHTML=box("ok",`Synced ${r.portfolio.positions.length} position(s), cash ${money(r.portfolio.cash)}.`);}catch(err){ $("#al-msg").innerHTML=errBox(err);} }).catch(()=>{});
+  if($("#inst")) $("#inst").onclick = e => busy(e.currentTarget, async()=>{ await api("install_poppler"); for(let i=0;i<120;i++){ await new Promise(r=>setTimeout(r,3000)); const s=await api("install_status"); if(!s.running){ if(s.installed){ toast("PDF reader installed"); await loadState(); VIEWS.settings(el);} else toast("Install failed: "+s.log.slice(-200),true); return; } } }).catch(()=>{});
+};
+
+/* ------------------------------------------------------------------ boot */
+(async function boot(){
+  try { await loadState(); } catch(e){ $("#main").innerHTML = box("err","The dashboard is not running. Double-click <b>Start (Windows)</b> or <b>Start (Mac)</b> in the TraderDashboard folder again."); return; }
+  if(!PAGES.some(x=>x.id===S.page)) S.page="home";
+  renderNav(); render(); loadClock();
+  if(S.page==="sim" && location.search.includes("demo")) setTimeout(()=>$("#s-go")?.click(), 300);
+  setInterval(loadClock, 60000);
+  setInterval(()=>{ if(document.hidden) return; if(S.page==="home") refreshHome(); if(S.page==="watch") loadQuotes(S.state.tickers).then(drawWatch).catch(()=>{}); }, 60000);
+  setInterval(()=>{ checkAlerts().catch(()=>{}); }, 60000);
+})();
+</script>
+</body>
+</html>

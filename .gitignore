@@ -1,0 +1,10 @@
+# Your personal data: Alpaca keys, SEC name/email, portfolio, limits, alerts
+trader/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# macOS / Windows clutter
+.DS_Store
+Thumbs.db
